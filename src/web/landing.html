@@ -4,151 +4,172 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CarryPilot — AI 资金费率套利 Agent</title>
 <style>
-  :root{--bg:#0a0e14;--panel:#12171f;--panel2:#161d27;--border:#232b36;--text:#e8eef5;--dim:#8b98a5;--green:#2ee6a8;--blue:#4d9fff;--amber:#ffb454;--red:#ff5d5d;}
+  :root{--bg:#070b11;--panel:#10161f;--panel2:#151d29;--border:#222c3a;--text:#e9eef5;--dim:#8797a8;
+        --green:#2ee6a8;--blue:#4d9fff;--amber:#ffb454;--red:#ff5d6c;--purple:#a78bfa;}
   *{box-sizing:border-box;margin:0}
-  body{background:var(--bg);color:var(--text);font:15px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
-  .wrap{max-width:1020px;margin:0 auto;padding:0 24px}
-  nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
-  .logo{font-size:18px;font-weight:700}.logo span{color:var(--green)}
-  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:12px 28px;border-radius:10px;text-decoration:none;border:none;font-size:15px;cursor:pointer}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font:15px/1.7 "Inter",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:
+    radial-gradient(700px 400px at 20% -10%, rgba(46,230,168,.09), transparent),
+    radial-gradient(700px 400px at 80% -10%, rgba(77,159,255,.09), transparent),
+    radial-gradient(500px 300px at 50% 110%, rgba(167,139,250,.06), transparent)}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35;
+    background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+    background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 0%,black 10%,transparent 65%)}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+  nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;flex-wrap:wrap;gap:10px}
+  .logo{font-size:19px;font-weight:800}.logo span{color:var(--green)}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:13px 30px;border-radius:12px;text-decoration:none;border:none;font-size:15px;cursor:pointer;transition:.2s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(46,230,168,.25)}
   .btn.ghost{background:none;border:1px solid var(--border);color:var(--text);font-weight:500}
-  .hero{text-align:center;padding:64px 0 40px}
-  .hero h1{font-size:44px;line-height:1.25;margin-bottom:18px}
+  .hero{text-align:center;padding:66px 0 30px}
+  .hero .pre{color:var(--green);font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px}
+  .hero h1{font-size:48px;line-height:1.2;margin-bottom:18px;font-weight:800;letter-spacing:-1px}
   .hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--green),#1bc4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero p{color:var(--dim);max-width:660px;margin:0 auto 28px;font-size:17px}
+  .hero p{color:var(--dim);max-width:620px;margin:0 auto 28px;font-size:17px}
   .badges{display:flex;gap:10px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
-  .badge{border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:13px;color:var(--dim)}
-  .logos{display:flex;gap:26px;justify-content:center;align-items:center;margin:34px 0 8px;flex-wrap:wrap;color:var(--dim);font-size:14px;font-weight:600}
-  .logos span{display:flex;align-items:center;gap:8px}
-  .logos .mark{font-size:20px}
-  h2.sec{text-align:center;font-size:28px;margin:64px 0 8px}
-  p.sub{text-align:center;color:var(--dim);margin-bottom:28px}
-  .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:26px;margin:16px 0}
-  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px}
-  .step{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}
-  .step .num{color:var(--green);font-weight:700;font-size:13px;margin-bottom:8px}
+  .badge{border:1px solid var(--border);background:rgba(255,255,255,.02);border-radius:20px;padding:5px 15px;font-size:13px;color:var(--dim)}
+  .logos{display:flex;gap:24px;justify-content:center;align-items:center;margin:36px 0 4px;flex-wrap:wrap;color:var(--dim);font-size:14px;font-weight:600;opacity:.9}
+  .logos span{display:flex;align-items:center;gap:8px}.logos .mark{font-size:19px}
+  h2.sec{text-align:center;font-size:30px;margin:72px 0 10px;font-weight:800;letter-spacing:-.5px}
+  p.sub{text-align:center;color:var(--dim);margin-bottom:30px;max-width:640px;margin-left:auto;margin-right:auto}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:28px;margin:16px 0}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;transition:.2s;position:relative;overflow:hidden}
+  .step:hover{transform:translateY(-3px);border-color:var(--green)}
+  .step::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent)}
+  .step .num{color:var(--green);font-weight:800;font-size:12px;letter-spacing:.1em;margin-bottom:10px}
   .step h3{font-size:16px;margin-bottom:6px}.step p{color:var(--dim);font-size:13px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;transition:.2s}
+  .card:hover{border-color:var(--blue);transform:translateY(-2px)}
   .card h3{font-size:16px;margin-bottom:8px}.card p{color:var(--dim);font-size:14px}
+  .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+  .why .w{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px}
+  .why .w .ic{font-size:26px;margin-bottom:10px}
+  .why .w b{display:block;margin-bottom:6px;font-size:15px}
+  .why .w p{color:var(--dim);font-size:13.5px}
+  /* 示例卡 */
+  .example{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
+  .ex-l{background:linear-gradient(160deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:18px;padding:26px}
+  .ex-l .h{font-size:13px;color:var(--amber);font-weight:700;letter-spacing:.08em;margin-bottom:12px}
+  .ex-l .big{font-size:34px;font-weight:800;letter-spacing:-1px}
+  .ex-l .row{display:flex;justify-content:space-between;border-bottom:1px dashed var(--border);padding:9px 0;font-size:14px}
+  .ex-l .row span:last-child{font-weight:700}
+  .pos{color:var(--green)}.neg{color:var(--red)}.dimt{color:var(--dim)}
+  table.ex{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  table.ex th,table.ex td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--border);font-size:14px}
+  table.ex th:first-child,table.ex td:first-child{text-align:left}
+  table.ex th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:var(--panel2)}
   svg text{font-family:inherit}
-  footer{border-top:1px solid var(--border);margin-top:70px;padding:26px 0;color:var(--dim);font-size:12px;text-align:center}
-  @media(max-width:640px){.hero h1{font-size:30px}}
+  footer{border-top:1px solid var(--border);margin-top:80px;padding:28px 0;color:var(--dim);font-size:12px;text-align:center}
+  @media(max-width:720px){.hero h1{font-size:31px}.example{grid-template-columns:1fr}h2.sec{font-size:24px}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav>
     <div class="logo">🛩️ Carry<span>Pilot</span></div>
-    <div><a class="btn ghost" href="https://github.com/OneHaydenZhang/KuroAI-INJ" style="margin-right:10px">GitHub</a><a class="btn" href="/app">Launch App</a></div>
+    <div><a class="btn ghost" href="https://github.com/OneHaydenZhang/CarryPilot" style="margin-right:10px">GitHub</a><a class="btn" href="/app">Launch App</a></div>
   </nav>
 
   <div class="hero">
+    <div class="pre">AI Funding-Rate Arbitrage Agent · Hyperliquid × Injective</div>
     <h1>不预测涨跌，<br>让 Agent 帮你<em>收资金费率</em></h1>
-    <p>CarryPilot 在 Hyperliquid 上执行市场中性套利：现货多 + 永续空对冲价格风险，AI Agent 逐回合发现机会、扣除真实成本、评估可持续性、自动开单调仓、见坏就撤。</p>
-    <div class="badges"><span class="badge">Δ 市场中性</span><span class="badge">成本后净收益口径</span><span class="badge">LLM 评估 + 确定性风控</span><span class="badge">API Wallet 无提币权限</span><span class="badge">INJ 积分计费</span></div>
-    <a class="btn" href="/app" style="font-size:17px;padding:14px 40px">开始使用 →</a>
+    <p>一句话：<b style="color:var(--text)">买现货 + 做空等额永续，价格涨跌互相抵消，每小时白收市场付给空头的「资金费」。</b>AI Agent 负责找机会、算成本、开单、盯盘、撤退。</p>
+    <div class="badges"><span class="badge">Δ 市场中性 · 不赌方向</span><span class="badge">扣完成本才叫收益</span><span class="badge">AI 评估 + 硬风控</span><span class="badge">授权钱包只能交易不能提币</span></div>
+    <a class="btn" href="/app" style="font-size:17px;padding:15px 44px">开始使用 →</a>
     <div class="logos">
       <span><span class="mark">🌊</span>Hyperliquid</span>
       <span><span class="mark">🥷</span>Injective</span>
-      <span><span class="mark">🦊</span>MetaMask / OKX / Rabby</span>
-      <span><span class="mark">🐋</span>DeepSeek × OpenRouter</span>
+      <span><span class="mark">🦊</span>MetaMask · OKX · Rabby</span>
+      <span><span class="mark">🐋</span>DeepSeek AI</span>
+    </div>
+  </div>
+
+  <h2 class="sec">套利为什么会存在？</h2>
+  <p class="sub">资金费率不是漏洞，是永续合约的核心机制 —— 而机制性的钱，会持续地流向愿意站在少数派一边的人</p>
+  <div class="why">
+    <div class="w"><div class="ic">⚓</div><b>永续合约需要锚</b><p>永续合约没有交割日，价格全靠「资金费率」拉住：合约价高于现货价时，做多的人每小时给做空的人付费，逼着价格回锚。这笔费用写在交易所规则里，每小时结算一次。</p></div>
+    <div class="w"><div class="ic">🐂</div><b>市场天然多头拥挤</b><p>牛市里人人都想加杠杆做多，多头长期多于空头 → 费率长期为正 → 做空的人持续收钱。愿意站到空头那边"供给平衡"的人，赚的就是这份拥挤费。</p></div>
+    <div class="w"><div class="ic">🛡️</div><b>对冲让它接近无风险</b><p>单纯做空会亏在涨价上。但「现货多 + 永续空」让涨跌两边抵消，只剩下每小时的费率收入。剩余的真实成本是手续费、滑点和费率翻转 —— 这正是本平台用引擎精确计算的部分。</p></div>
+  </div>
+
+  <h2 class="sec">一个具体的例子</h2>
+  <p class="sub">假设 BTC 永续小时费率 0.005%（高费率窗口，历史上牛市常见），你投入 $10,000</p>
+  <div class="example">
+    <div class="ex-l">
+      <div class="h">📐 假设条件（示意，非承诺收益）</div>
+      <div class="row"><span class="dimt">投入本金</span><span>$10,000</span></div>
+      <div class="row"><span class="dimt">组合</span><span>买 $10,000 现货 + 空 $10,000 永续</span></div>
+      <div class="row"><span class="dimt">小时费率</span><span class="pos">+0.005% / 小时</span></div>
+      <div class="row"><span class="dimt">一次性成本（4腿手续费+滑点）</span><span class="neg">-$23</span></div>
+      <div class="row"><span class="dimt">价格涨跌影响</span><span>≈ $0（两腿对冲）</span></div>
+      <div style="margin-top:16px" class="dimt">费率收入按小时累计：</div>
+      <div class="big pos">+$0.50<span style="font-size:15px;color:var(--dim)"> / 小时</span></div>
+    </div>
+    <div>
+      <table class="ex">
+        <thead><tr><th>持有时长</th><th>费率收入</th><th>扣一次性成本后</th><th>折合年化</th></tr></thead>
+        <tbody>
+          <tr><td>8 小时</td><td class="pos">+$4</td><td class="neg">-$19（未回本）</td><td class="dimt">—</td></tr>
+          <tr><td>2 天（回本点≈46h）</td><td class="pos">+$24</td><td class="pos">+$1</td><td class="dimt">≈0%</td></tr>
+          <tr><td>1 周</td><td class="pos">+$84</td><td class="pos">+$61</td><td class="pos">≈32%</td></tr>
+          <tr><td>1 月</td><td class="pos">+$360</td><td class="pos">+$337</td><td class="pos">≈41%</td></tr>
+        </tbody>
+      </table>
+      <div style="color:var(--dim);font-size:12.5px;margin-top:10px;line-height:1.7">💡 看懂了吗：<b style="color:var(--text)">这是持有型策略</b> —— 前两天在还成本，之后每小时都是净赚；但费率随时会衰减或翻负，所以需要 Agent 每 60 秒盯一次，费率不行了立刻撤。费率维持是假设，实际会波动，这正是 AI 要判断的事。</div>
     </div>
   </div>
 
   <h2 class="sec">套利逻辑，一张图</h2>
-  <p class="sub">资金费率为正时，做多的人每小时付钱给做空的人 —— 我们两边都站，只收钱不赌方向</p>
   <div class="panel" style="overflow-x:auto">
     <svg viewBox="0 0 900 300" width="100%" style="min-width:640px">
-      <defs>
-        <marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#8b98a5" stroke-width="1.5"/></marker>
-        <marker id="arg" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#2ee6a8" stroke-width="1.5"/></marker>
-      </defs>
-      <!-- 左：现货腿 -->
-      <rect x="30" y="60" width="220" height="90" rx="12" fill="#12171f" stroke="#2ee6a8"/>
-      <text x="140" y="95" fill="#2ee6a8" font-size="16" text-anchor="middle" font-weight="700">▲ 现货腿 · 做多</text>
-      <text x="140" y="120" fill="#8b98a5" font-size="13" text-anchor="middle">买入 $1000 BTC 现货</text>
-      <text x="140" y="138" fill="#8b98a5" font-size="12" text-anchor="middle">币价涨 → 这边赚</text>
-      <!-- 右：永续腿 -->
-      <rect x="650" y="60" width="220" height="90" rx="12" fill="#12171f" stroke="#ff5d5d"/>
-      <text x="760" y="95" fill="#ff5d5d" font-size="16" text-anchor="middle" font-weight="700">▼ 永续腿 · 做空</text>
-      <text x="760" y="120" fill="#8b98a5" font-size="13" text-anchor="middle">做空 $1000 BTC 永续</text>
-      <text x="760" y="138" fill="#8b98a5" font-size="12" text-anchor="middle">币价涨 → 这边亏</text>
-      <!-- 中间对冲 -->
-      <line x1="250" y1="105" x2="650" y2="105" stroke="#8b98a5" stroke-dasharray="6,5"/>
-      <rect x="360" y="80" width="180" height="50" rx="10" fill="#161d27" stroke="#232b36"/>
-      <text x="450" y="101" fill="#e8eef5" font-size="14" text-anchor="middle" font-weight="700">价格风险 = 0</text>
-      <text x="450" y="119" fill="#8b98a5" font-size="12" text-anchor="middle">涨跌互相抵消（Δ 中性）</text>
-      <!-- funding 流 -->
+      <defs><marker id="arg" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#2ee6a8" stroke-width="1.5"/></marker></defs>
+      <rect x="30" y="60" width="220" height="90" rx="14" fill="#10161f" stroke="#2ee6a8"/>
+      <text x="140" y="95" fill="#2ee6a8" font-size="16" text-anchor="middle" font-weight="700">▲ 现货腿 · 买入持有</text>
+      <text x="140" y="120" fill="#8797a8" font-size="13" text-anchor="middle">买入 $10,000 BTC 现货</text>
+      <text x="140" y="138" fill="#8797a8" font-size="12" text-anchor="middle">币价涨 → 这边赚</text>
+      <rect x="650" y="60" width="220" height="90" rx="14" fill="#10161f" stroke="#ff5d6c"/>
+      <text x="760" y="95" fill="#ff5d6c" font-size="16" text-anchor="middle" font-weight="700">▼ 合约腿 · 永续做空</text>
+      <text x="760" y="120" fill="#8797a8" font-size="13" text-anchor="middle">做空 $10,000 BTC 永续</text>
+      <text x="760" y="138" fill="#8797a8" font-size="12" text-anchor="middle">币价涨 → 这边亏</text>
+      <line x1="250" y1="105" x2="650" y2="105" stroke="#8797a8" stroke-dasharray="6,5"/>
+      <rect x="360" y="80" width="180" height="50" rx="12" fill="#151d29" stroke="#222c3a"/>
+      <text x="450" y="101" fill="#e9eef5" font-size="14" text-anchor="middle" font-weight="700">价格风险 ≈ 0</text>
+      <text x="450" y="119" fill="#8797a8" font-size="12" text-anchor="middle">涨跌互相抵消（Δ 中性）</text>
       <path d="M 760 150 Q 760 230 470 235" fill="none" stroke="#2ee6a8" stroke-width="2.5" marker-end="url(#arg)"/>
-      <rect x="330" y="210" width="240" height="52" rx="10" fill="#12171f" stroke="#2ee6a8"/>
+      <rect x="330" y="210" width="240" height="52" rx="12" fill="#10161f" stroke="#2ee6a8"/>
       <text x="450" y="232" fill="#2ee6a8" font-size="15" text-anchor="middle" font-weight="700">💰 每小时收资金费</text>
-      <text x="450" y="251" fill="#8b98a5" font-size="12" text-anchor="middle">多头付给空头（费率为正时）</text>
-      <text x="640" y="200" fill="#8b98a5" font-size="12">funding 每小时结算</text>
-      <!-- 成本提醒 -->
-      <text x="140" y="200" fill="#ffb454" font-size="12">⚠ 但要扣：4 条腿手续费 + 滑点</text>
-      <text x="140" y="220" fill="#ffb454" font-size="12">扣完还是正的，才叫机会</text>
+      <text x="450" y="251" fill="#8797a8" font-size="12" text-anchor="middle">多头付给空头（费率为正时）</text>
+      <text x="140" y="200" fill="#ffb454" font-size="12">⚠ 要扣：4 条腿手续费 + 滑点 + 费率翻转风险</text>
+      <text x="140" y="220" fill="#ffb454" font-size="12">扣完还是正的，才叫机会 —— 引擎替你算</text>
     </svg>
   </div>
 
-  <h2 class="sec">用户动线</h2>
-  <p class="sub">从连接钱包到看见收益，五步</p>
+  <h2 class="sec">平台在做什么 · 用户动线</h2>
+  <p class="sub">你只做两件事：连钱包、创建 Agent。剩下的是它的工作</p>
   <div class="flow">
-    <div class="step"><div class="num">STEP 1 🔗</div><h3>连接钱包</h3><p>支持 MetaMask / OKX / Rabby 等注入式钱包（EIP-6963 自动发现）。仅签名做身份，无交易无 gas。新用户送体验积分。</p></div>
-    <div class="step"><div class="num">STEP 2 📡</div><h3>看清市场</h3><p>费率现状中心看全市场实时费率与 7 天曲线；套利机会中心看扣完成本后哪些标的真的有机会、投入 1000-20000u 每天/每周能赚多少（大白话）。</p></div>
-    <div class="step"><div class="num">STEP 3 🤖</div><h3>创建 Agent</h3><p>选标的、风格（保守/均衡/激进）、资金、回合数（≤120），还可以给 LLM 写自定义指令。模拟盘一键跑；实盘需授权无提币权限的 API Wallet。</p></div>
-    <div class="step"><div class="num">STEP 4 ⚙️</div><h3>Agent 逐回合决策</h3><p>每 60 秒一回合：拉最新费率 → 成本引擎 → LLM 评估 → 风控硬门 → 开仓/换仓/清仓/观望，每一步的理由写进日志，预测线和实际线同图对比。</p></div>
-    <div class="step"><div class="num">STEP 5 📈</div><h3>观测与结算</h3><p>收益中心看 PnL 曲线与平仓 Receipt；风险中心看风险分级与 48h 三情景预测。费率翻负 Agent 自动清仓。</p></div>
+    <div class="step"><div class="num">STEP 1 🔗</div><h3>连接钱包</h3><p>MetaMask / OKX / Rabby 弹窗选择，签名即登录。手机端支持跳转钱包 App 打开。无交易、无 gas、不碰资金。</p></div>
+    <div class="step"><div class="num">STEP 2 📡</div><h3>看清市场</h3><p>费率现状：全市场实时费率+7天曲线+标签（多付费/空付费/有机会）。套利机会：扣完成本的真实净APR，附 1000-20000u 的收益规模表。</p></div>
+    <div class="step"><div class="num">STEP 3 🤖</div><h3>创建 Agent</h3><p>选标的、风格、资金、回合数（≤120），用结构化模板给 AI 定偏好。INJ 积分是燃料，每回合消耗。</p></div>
+    <div class="step"><div class="num">STEP 4 ⚙️</div><h3>Agent 逐回合工作</h3><p>每 60 秒：拉最新费率 → 算成本 → AI 评估（带历史复盘记忆）→ 风控硬门 → 开仓/换仓/清仓，换仓前先算磨损是否划算，每步理由入日志。</p></div>
+    <div class="step"><div class="num">STEP 5 📈</div><h3>观测与复盘</h3><p>预测 vs 实际曲线、48h 三情景风险预测、平仓自动复盘沉淀为记忆，喂给下一次决策 —— 越跑越懂这个市场。</p></div>
   </div>
 
-  <h2 class="sec">数据流动线</h2>
-  <p class="sub">AI 只负责判断与解释，数字与下单全部由确定性代码完成</p>
-  <div class="panel" style="overflow-x:auto">
-    <svg viewBox="0 0 980 210" width="100%" style="min-width:760px">
-      <defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#4d9fff" stroke-width="1.5"/></marker></defs>
-      <g font-size="13" text-anchor="middle">
-        <rect x="10" y="40" width="150" height="70" rx="10" fill="#12171f" stroke="#4d9fff"/>
-        <text x="85" y="66" fill="#e8eef5" font-weight="700">🌊 Hyperliquid API</text>
-        <text x="85" y="86" fill="#8b98a5" font-size="11">费率/盘口/现货 60s</text>
-        <rect x="205" y="40" width="150" height="70" rx="10" fill="#12171f" stroke="#232b36"/>
-        <text x="280" y="60" fill="#e8eef5" font-weight="700">⚙️ 确定性引擎</text>
-        <text x="280" y="80" fill="#8b98a5" font-size="11">成本瀑布·净APR</text>
-        <text x="280" y="96" fill="#8b98a5" font-size="11">拒绝码·候选排序</text>
-        <rect x="400" y="40" width="140" height="70" rx="10" fill="#12171f" stroke="#232b36"/>
-        <text x="470" y="60" fill="#e8eef5" font-weight="700">🐋 LLM 评估</text>
-        <text x="470" y="80" fill="#8b98a5" font-size="11">可持续性判断</text>
-        <text x="470" y="96" fill="#8b98a5" font-size="11">只建议·不改数</text>
-        <rect x="585" y="40" width="140" height="70" rx="10" fill="#12171f" stroke="#ffb454"/>
-        <text x="655" y="60" fill="#ffb454" font-weight="700">🛡️ RiskGuard</text>
-        <text x="655" y="80" fill="#8b98a5" font-size="11">仓位/资金硬顶</text>
-        <text x="655" y="96" fill="#8b98a5" font-size="11">LLM 不可越权</text>
-        <rect x="770" y="40" width="150" height="70" rx="10" fill="#12171f" stroke="#2ee6a8"/>
-        <text x="845" y="60" fill="#2ee6a8" font-weight="700">🤖 执行</text>
-        <text x="845" y="80" fill="#8b98a5" font-size="11">Paper 记账 / 实盘下单</text>
-        <text x="845" y="96" fill="#8b98a5" font-size="11">双腿·失败回滚</text>
-        <line x1="160" y1="75" x2="203" y2="75" stroke="#4d9fff" stroke-width="2" marker-end="url(#a2)"/>
-        <line x1="355" y1="75" x2="398" y2="75" stroke="#4d9fff" stroke-width="2" marker-end="url(#a2)"/>
-        <line x1="540" y1="75" x2="583" y2="75" stroke="#4d9fff" stroke-width="2" marker-end="url(#a2)"/>
-        <line x1="725" y1="75" x2="768" y2="75" stroke="#4d9fff" stroke-width="2" marker-end="url(#a2)"/>
-        <rect x="205" y="150" width="520" height="46" rx="10" fill="#161d27" stroke="#232b36"/>
-        <text x="465" y="170" fill="#e8eef5" font-size="12" font-weight="700">🥷 Injective：积分充值（INJ→积分，txhash 幂等入账）· 未来：身份 ERC-8004 / Receipt 上链</text>
-        <text x="465" y="188" fill="#8b98a5" font-size="11">观测回流：持仓 PnL·预测 vs 实际·风险分级 → 五大中心</text>
-      </g>
-    </svg>
-  </div>
-
-  <h2 class="sec">五大中心</h2>
+  <h2 class="sec">五大中心 + 设置</h2>
   <div class="grid">
-    <div class="card"><h3>📡 费率现状中心</h3><p>HL 全市场实时费率 + 7 天费率曲线 + 一键跳转 HL；每个标的可展开阐述：现在什么情况、能不能做。</p></div>
-    <div class="card"><h3>🔬 套利机会中心</h3><p>有机会的置顶，过滤标签筛选；展开看两腿组合、成本瀑布、投入 1000-20000u 的每 8h/天/周收益规模。</p></div>
-    <div class="card"><h3>🤖 Agent 中心</h3><p>风格/回合/自定义 prompt；逐回合决策日志讲清为什么开、为什么换、为什么撤；预测 vs 实际曲线对比。</p></div>
-    <div class="card"><h3>📈 收益中心</h3><p>PnL 曲线、平仓 Receipt 哈希、INJ 积分充值、实盘 API Wallet 授权。</p></div>
-    <div class="card"><h3>🛡️ 风险中心</h3><p>逐仓风险分级 + 未来 48h 三情景（维持/衰减/翻负）PnL 预测图；实盘清算价与保证金观测。</p></div>
+    <div class="card"><h3>📡 费率现状中心</h3><p>实时费率、标签一眼懂（多付费/空付费/费率偏高/波动大）、7 天坐标曲线、一键跳 HL。</p></div>
+    <div class="card"><h3>🔬 套利机会中心</h3><p>机会卡片置顶高亮，过滤标签，点开看对冲结构、成本瀑布图、大白话收益表、术语问号即点即懂。</p></div>
+    <div class="card"><h3>🤖 Agent 中心</h3><p>燃料余量置顶，全局统计（胜率/回合/PnL），每个 Agent 的决策日志、预测对比图、复盘记忆。</p></div>
+    <div class="card"><h3>📈 收益中心</h3><p>PnL 曲线（坐标轴）、平仓记录与防篡改 Receipt 哈希。</p></div>
+    <div class="card"><h3>🛡️ 风险中心</h3><p>逐仓风险分级、费率衰减告警、48h 三情景预测图、实盘清算价观测。</p></div>
+    <div class="card"><h3>⚙️ 设置</h3><p>钱包信息、INJ 积分充值（Agent 燃料）、实盘交易授权（API Wallet 只能交易不能提币）。</p></div>
   </div>
 
   <footer>
-    ⚠ 本平台输出为研究结论与模拟/实盘执行记录，不构成投资建议或收益承诺。实盘请仅使用可承受损失的资金。<br>
-    CarryPilot · Hyperliquid 站内资金费率套利 · Injective 积分与链上证据 · AdventureX 2026
+    ⚠ 本平台输出为研究结论与模拟/实盘执行记录，不构成投资建议或收益承诺。示例数字为机制说明用的假设，实际费率随市场波动。实盘请仅使用可承受损失的资金。<br><br>
+    🛩️ CarryPilot · Hyperliquid 站内资金费率套利 · Injective 积分与链上证据 · AdventureX 2026
   </footer>
 </div>
 </body>

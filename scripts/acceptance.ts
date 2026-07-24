@@ -20,6 +20,8 @@ const scan = await j(await fetch(`${BASE}/api/scan`));
 check('A1 扫描接口可用', Array.isArray(scan.candidates) && scan.candidates.length > 0, `${scan.candidates?.length} 候选`);
 check('A2 仅 HL 站内 S1（无跨所）', scan.candidates.every((c: any) => c.strategy === 'S1_SPOT_PERP'));
 check('A3 费率中心数据存在', Array.isArray(scan.rates) && scan.rates.length >= 10, `${scan.rates?.length} 个市场`);
+check('A4 候选含标签/叙述/收益表', scan.candidates.every((c: any) => Array.isArray(c.tags) && c.narrative?.zh && Array.isArray(c.payouts) && c.payouts.length === 4));
+check('A5 不暴露 openrouter/模型版本', !JSON.stringify(scan.llm).toLowerCase().includes('openrouter') && !/deepseek-chat|claude-\d/.test(JSON.stringify(scan.llm)), JSON.stringify(scan.llm));
 
 // AC-B 确定性数学一致（PRD AC-08 精神）
 let mathOk = true;

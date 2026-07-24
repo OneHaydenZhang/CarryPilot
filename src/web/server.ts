@@ -7,7 +7,7 @@ import { log } from '../lib/logger.js';
 import { issueNonce, verifyAndIssueToken, authenticate } from '../lib/auth.js';
 import { fetchPerpSnapshots, fetchSpotSnapshots, type HlPerpSnapshot, type HlSpotSnapshot } from '../connectors/hyperliquid.js';
 import { buildS1Candidates, ENGINE_VERSION, CONFIG, type Candidate } from '../core/candidates.js';
-import { loadStore, saveStore, store } from '../core/store.js';
+import { loadStore, saveStore, store, virtualBalanceOf, setVirtualBalance } from '../core/store.js';
 import { tickAgents, closePosition, viewPosition, STYLE_PARAMS, LIMITS, type LiveExecutor } from '../core/agents.js';
 import { llmEnabled } from '../core/llm.js';
 import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINTS } from '../core/points.js';
@@ -35,6 +35,17 @@ interface ScanState {
 let scan: ScanState | null = null;
 let scanning: Promise<ScanState> | null = null;
 const fundingHistCache = new Map<string, { at: number; data: unknown }>();
+
+/** 对外只展示模型家族名，不暴露路由商与版本号 */
+function llmDisplayName(): string {
+  const m = (process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat').toLowerCase();
+  if (m.includes('deepseek')) return 'DeepSeek';
+  if (m.includes('claude')) return 'Claude';
+  if (m.includes('gpt') || m.includes('openai')) return 'GPT';
+  if (m.includes('gemini')) return 'Gemini';
+  if (m.includes('qwen')) return 'Qwen';
+  return 'AI';
+}
 
 async function refreshScan(): Promise<ScanState> {
   const observedAt = new Date().toISOString();
@@ -95,7 +106,7 @@ const server = createServer(async (req, res) => {
         network: config.network,
         engineVersion: ENGINE_VERSION,
         horizonHours: CONFIG.horizonHours,
-        llm: { enabled: llmEnabled(), model: process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat' },
+        llm: { enabled: llmEnabled(), name: llmDisplayName() },
         candidates: s.candidates,
         rates: rates.slice(0, 60),
         disclaimer: DISCLAIMER,
@@ -138,8 +149,14 @@ const server = createServer(async (req, res) => {
       const agents = store.agents.filter((a) => a.owner === owner);
       const positions = store.positions.filter((p) => p.owner === owner).map(viewPosition);
       const wallet = store.wallets.find((w) => w.owner === owner);
-      const totalPnl = positions.reduce((a, p) => a + p.pnlUsd, 0);
-      const openCount = positions.filter((p) => p.status === 'OPEN').length;
+      const summaryFor = (mode: 'PAPER' | 'LIVE') => {
+        const ps = positions.filter((p) => p.mode === mode);
+        return {
+          totalPnl: ps.reduce((a, p) => a + p.pnlUsd, 0),
+          openCount: ps.filter((p) => p.status === 'OPEN').length,
+          fundingAccrued: ps.reduce((a, p) => a + p.fundingAccruedUsd, 0),
+        };
+      };
       return json(res, 200, {
         address: owner,
         agents,
@@ -147,10 +164,19 @@ const server = createServer(async (req, res) => {
         styleParams: STYLE_PARAMS,
         limits: LIMITS,
         llmEnabled: llmEnabled(),
+        tickMinutes: 10,
+        virtualBalance: virtualBalanceOf(owner),
         live: { agentAddress: wallet?.agentAddress ?? null, approved: Boolean(wallet?.approvedAt) },
-        summary: { totalPnl, openCount, fundingAccrued: positions.reduce((a, p) => a + p.fundingAccruedUsd, 0) },
+        summary: { PAPER: summaryFor('PAPER'), LIVE: summaryFor('LIVE') },
         points: { balance: balanceOf(owner), perTick: POINTS.perTick, rateInj: POINTS.rateInj, treasury: treasuryInj(), depositFromInj: (await import('../lib/bech32.js')).ethToInj(owner) },
       });
+    }
+
+    if (path === '/api/prefs' && req.method === 'POST') {
+      const b = await readBody(req);
+      setVirtualBalance(owner, Number(b.virtualBalanceUsd) || 10000);
+      saveStore();
+      return json(res, 200, { virtualBalance: virtualBalanceOf(owner) });
     }
 
     if (path === '/api/points') {
@@ -166,7 +192,7 @@ const server = createServer(async (req, res) => {
       const mine = store.agents.filter((a) => a.owner === owner);
       if (mine.length >= LIMITS.maxAgentsPerUser) return json(res, 400, { error: `每个用户最多 ${LIMITS.maxAgentsPerUser} 个 Agent` });
       const mode = b.mode === 'LIVE' ? 'LIVE' : 'PAPER';
-      const cap = mode === 'LIVE' ? LIMITS.maxLiveCapitalUsd : LIMITS.maxPaperCapitalUsd;
+      const cap = mode === 'LIVE' ? LIMITS.maxLiveCapitalUsd : Math.min(LIMITS.maxPaperCapitalUsd, virtualBalanceOf(owner));
       const capitalUsd = Math.min(Math.max(Number(b.capitalUsd) || 0, LIMITS.minCapitalUsd), cap);
       if (mode === 'LIVE' && !store.wallets.find((w) => w.owner === owner)?.approvedAt)
         return json(res, 400, { error: '实盘模式需先完成 API Wallet 授权（收益中心→实盘设置）' });
@@ -190,6 +216,7 @@ const server = createServer(async (req, res) => {
       };
       store.agents.push(agent);
       saveStore();
+      triggerEngineSoon();
       return json(res, 200, { agent });
     }
 
@@ -213,7 +240,10 @@ const server = createServer(async (req, res) => {
           }
           closePosition(open, 'AGENT_STOPPED');
         }
-      } else if (b.action === 'start') agent.status = 'RUNNING';
+      } else if (b.action === 'start') {
+        agent.status = 'RUNNING';
+        triggerEngineSoon();
+      }
       else if (b.action === 'delete') {
         if (open) return json(res, 400, { error: '有持仓的 Agent 不能删除，请先停止' });
         store.agents.splice(store.agents.indexOf(agent), 1);
@@ -282,7 +312,23 @@ async function engineLoop(): Promise<void> {
   }
 }
 
+const TICK_MS = 10 * 60_000; // 10 分钟一回合（虚拟盘与实盘一致）
+let engineRunning = false;
+async function safeEngine(): Promise<void> {
+  if (engineRunning) return;
+  engineRunning = true;
+  try {
+    await engineLoop();
+  } finally {
+    engineRunning = false;
+  }
+}
+/** 新建 Agent 后立即跑一回合，给用户即时反馈；之后每 10 分钟 */
+export function triggerEngineSoon(): void {
+  setTimeout(safeEngine, 300);
+}
+
 loadStore();
-server.listen(PORT, () => log.info('web_up', { port: PORT, network: config.network, llm: llmEnabled() }));
-void engineLoop();
-setInterval(engineLoop, 60_000);
+server.listen(PORT, () => log.info('web_up', { port: PORT, network: config.network, llm: llmEnabled(), tickMinutes: TICK_MS / 60000 }));
+void safeEngine();
+setInterval(safeEngine, TICK_MS);

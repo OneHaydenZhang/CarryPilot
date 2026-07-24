@@ -25,6 +25,8 @@ export interface AgentRecord {
   rounds: number;
   /** 用户自定义的 LLM 评估补充指令 */
   customPrompt: string;
+  /** Agent 记忆：每笔平仓后的复盘，喂给后续 LLM 评估形成学习闭环 */
+  memory?: { at: string; asset: string; pnlUsd: number; holdHours: number; entryNetApr: number; realizedApr: number; lesson: string }[];
 }
 
 export interface PositionRecord {
@@ -61,6 +63,12 @@ export interface UserWalletRecord {
   approvedAt: string | null;
 }
 
+export interface UserPrefsRecord {
+  owner: string;
+  /** 虚拟盘账户资金（用户在设置里自定，虚拟盘 Agent 从中划拨） */
+  virtualBalanceUsd: number;
+}
+
 export interface PointsTxRecord {
   address: string;
   kind: string; // welcome | deposit | tick | grant
@@ -76,10 +84,11 @@ interface StoreShape {
   wallets: UserWalletRecord[];
   points: Record<string, number>;
   pointsTx: PointsTxRecord[];
+  prefs: UserPrefsRecord[];
 }
 
 const FILE = 'data/store.json';
-const empty = (): StoreShape => ({ agents: [], positions: [], wallets: [], points: {}, pointsTx: [] });
+const empty = (): StoreShape => ({ agents: [], positions: [], wallets: [], points: {}, pointsTx: [], prefs: [] });
 let state: StoreShape = empty();
 
 export function loadStore(): void {
@@ -113,4 +122,18 @@ export const store = {
   get pointsTx() {
     return state.pointsTx;
   },
+  get prefs() {
+    return state.prefs;
+  },
 };
+
+const DEFAULT_VIRTUAL_BALANCE = 10_000;
+export function virtualBalanceOf(owner: string): number {
+  return state.prefs.find((p) => p.owner === owner)?.virtualBalanceUsd ?? DEFAULT_VIRTUAL_BALANCE;
+}
+export function setVirtualBalance(owner: string, usd: number): void {
+  const clamped = Math.min(Math.max(usd, 100), 1_000_000);
+  const rec = state.prefs.find((p) => p.owner === owner);
+  if (rec) rec.virtualBalanceUsd = clamped;
+  else state.prefs.push({ owner, virtualBalanceUsd: clamped });
+}

@@ -73,6 +73,26 @@ export function closePosition(pos: PositionRecord, reason: string): void {
   pos.closeReason = reason;
   const record = { ...pos, receiptHash: undefined };
   pos.receiptHash = createHash('sha256').update(JSON.stringify(record)).digest('hex');
+  recordReview(pos, reason);
+}
+
+/** 平仓复盘 → 写入 Agent 记忆（确定性生成 lesson，后续 LLM 评估会带上最近复盘做学习） */
+function recordReview(pos: PositionRecord, reason: string): void {
+  const agent = store.agents.find((a) => a.id === pos.agentId);
+  if (!agent) return;
+  const holdHours = Math.max((Date.parse(pos.closedAt!) - Date.parse(pos.entryAt)) / 3600e3, 1e-6);
+  const realizedApr = (pos.pnlUsd / pos.notionalUsd / holdHours) * 24 * 365 * 100;
+  const gap = realizedApr - pos.entryNetApr;
+  let lesson: string;
+  if (reason === 'FUNDING_FLIPPED') lesson = `${pos.asset} 费率在 ${holdHours.toFixed(1)}h 内翻负——该标的费率持续性差，下次对其提高置信度要求或降低仓位`;
+  else if (reason === 'REBALANCE_TO_BETTER') lesson = `因换仓退出，磨损了一次往返成本；只有新标的优势能覆盖磨损时换仓才划算`;
+  else if (reason === 'ROUNDS_EXHAUSTED') lesson = `回合耗尽平仓；若策略仍在盈利区间，可考虑更长回合数`;
+  else if (gap < -10) lesson = `实现年化 ${realizedApr.toFixed(1)}% 明显低于入场预估 ${pos.entryNetApr.toFixed(1)}%——入场时费率处于尖峰，衰减快于线性外推`;
+  else if (pos.pnlUsd > 0) lesson = `按预期兑现：实现年化 ${realizedApr.toFixed(1)}%，费率保持稳定，同类条件可复制`;
+  else lesson = `持有 ${holdHours.toFixed(1)}h 未能覆盖开平仓磨损（成本 $${pos.costsPaidUsd.toFixed(2)}）——短持有期难回本，入场门槛应更严格`;
+  agent.memory ??= [];
+  agent.memory.push({ at: pos.closedAt!, asset: pos.asset, pnlUsd: Number(pos.pnlUsd.toFixed(4)), holdHours: Number(holdHours.toFixed(2)), entryNetApr: Number(pos.entryNetApr.toFixed(2)), realizedApr: Number(realizedApr.toFixed(2)), lesson });
+  if (agent.memory.length > 30) agent.memory.splice(0, agent.memory.length - 30);
 }
 
 export interface PositionView extends PositionRecord {
@@ -165,15 +185,24 @@ export async function tickAgents(candidates: Candidate[], liveExecutor: LiveExec
       const better = [...byAsset.values()]
         .filter((x) => x.decision === 'ACCEPTED' && x.asset !== open!.asset && (agent.asset === 'ALL' || x.asset === agent.asset) && x.netApr >= params.minEntryNetApr)
         .sort((a, b) => b.netApr - a.netApr)[0];
-      const rebalance = !flipped && !decayed && better && netAprNow !== null && better.netApr > netAprNow + 5;
+      // 换仓磨损核算：换仓 = 平旧腿 + 开新腿，磨损 ≈ 一次完整往返成本（4 腿手续费 + 滑点）
+      const rotationWearPct = (CONFIG.takerFeePct.hyperliquid ?? 0.045) * 4 + CONFIG.slippageReservePct;
+      // 新旧净APR差在未来 24h 多收的费率（% 名义）
+      const advantagePct24h = better && netAprNow !== null ? ((better.netApr - netAprNow) / 100 / 365) * 24 * 100 : 0;
+      // 只有优势能覆盖 2 倍磨损（安全边际）才换仓
+      const advantageOk = advantagePct24h > rotationWearPct * 2;
+      const rebalance = Boolean(!flipped && !decayed && better && netAprNow !== null && better.netApr > netAprNow + 5 && advantageOk);
 
+      if (better && netAprNow !== null && better.netApr > netAprNow + 5 && !advantageOk && !flipped && !decayed) {
+        agentLog(agent, `${roundTag} 发现 ${better.asset} 费率更优（${better.netApr.toFixed(1)}% vs ${netAprNow.toFixed(1)}%），但 24h 多收 ${advantagePct24h.toFixed(3)}% 不足以覆盖换仓磨损 ${rotationWearPct.toFixed(2)}%×2，保持现有配置`);
+      }
       if (flipped || decayed || rebalance) {
         const reason = flipped ? 'FUNDING_FLIPPED' : decayed ? 'NET_APR_BELOW_EXIT' : 'REBALANCE_TO_BETTER';
         const why = flipped
           ? `${open.asset} 费率翻负（${open.currentHourlyFundingPct.toFixed(5)}%/h），继续持有=倒贴，立即清仓`
           : decayed
-            ? `${open.asset} 净APR 已衰减至 ${netAprNow?.toFixed(1)}%（低于「${params.label}」退出线 ${params.exitNetApr}%），清仓落袋`
-            : `发现更优标的 ${better!.asset}（净APR ${better!.netApr.toFixed(1)}% vs 当前 ${netAprNow?.toFixed(1)}%），换仓`;
+            ? `${open.asset} 净APR 已衰减至 ${netAprNow?.toFixed(1)}%（低于「${params.label}」退出线 ${params.exitNetApr}%），清仓落袋（已计入平仓磨损）`
+            : `换仓 ${open.asset}→${better!.asset}：净APR ${better!.netApr.toFixed(1)}% vs ${netAprNow?.toFixed(1)}%，24h 多收 ${advantagePct24h.toFixed(3)}% > 磨损 ${rotationWearPct.toFixed(2)}%×2，划算`;
         if (agent.mode === 'LIVE' && liveExecutor) {
           try {
             const r = await liveExecutor.closeCarry(agent.owner, open);
@@ -185,10 +214,7 @@ export async function tickAgents(candidates: Candidate[], liveExecutor: LiveExec
         }
         closePosition(open, reason);
         agentLog(agent, `${roundTag} 平仓 ${open.asset} · ${why} · 本仓净PnL $${open.pnlUsd.toFixed(2)}`);
-        open = undefined; // 允许本回合立即评估新开仓（换仓场景）
-        if (!rebalance) {
-          // 非换仓的退出：本回合到此为止
-        }
+        open = undefined; // 换仓场景：本回合可立即评估新开仓
       }
     }
     if (!open) {
@@ -202,7 +228,7 @@ export async function tickAgents(candidates: Candidate[], liveExecutor: LiveExec
         const best = eligible[0]!;
         // LLM 评估门：结论否决可阻止开仓；LLM 不可用则按确定性规则继续
         if (llmEnabled()) {
-          const verdict = await evaluateCandidate(best, agent.customPrompt ?? '');
+          const verdict = await evaluateCandidate(best, agent.customPrompt ?? '', agent.memory ?? []);
           if (verdict && !verdict.approve) {
             agentLog(agent, `${roundTag} LLM 否决 ${best.asset}（置信${(verdict.confidence * 100).toFixed(0)}%）：${verdict.reasoning}`);
             continue;

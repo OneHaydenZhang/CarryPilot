@@ -75,6 +75,20 @@ export interface Candidate {
   payouts: Payout[];
   /** 费率维持不变时回本所需小时数（覆盖往返成本） */
   breakevenHours: number | null;
+  /** 一眼可读的标签键（前端 i18n）：longs-pay/shorts-pay/rate-elevated/opportunity/wrapped-spot/no-spot/low-liquidity */
+  tags: string[];
+}
+
+function buildTags(hourlyFunding: number, decision: string, codes: string[], flags: string[], hasSpot: boolean): string[] {
+  const t: string[] = [];
+  if (decision === 'ACCEPTED') t.push('opportunity');
+  if (hourlyFunding > 0) t.push('longs-pay');
+  if (hourlyFunding < 0) t.push('shorts-pay');
+  if (Math.abs(hourlyFunding) > 0.0000125 * 4) t.push('rate-elevated'); // 超过基准利率 4 倍
+  if (flags.includes('wrapper_risk')) t.push('wrapped-spot');
+  if (!hasSpot) t.push('no-spot');
+  if (codes.includes('REJECTED_LIQUIDITY')) t.push('low-liquidity');
+  return t;
 }
 
 const PAYOUT_NOTIONALS = [1000, 5000, 10000, 20000];
@@ -213,12 +227,14 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
           payouts: buildPayouts(hourlyPct, totalCostPct),
           breakevenHours,
           narrative: { zh: '', en: '' },
+          tags: [],
         },
         extraCodes,
       ),
     );
     const c = out[out.length - 1]!;
     c.narrative = buildNarrative(asset, hourlyPct, grossAprPct, netAprPct, coverage, c.rejectionCodes, spotName, breakevenHours, flags.includes('wrapper_risk'));
+    c.tags = buildTags(perp.hourlyFunding, c.decision, c.rejectionCodes, flags, Boolean(spot));
   }
   return out.sort((a, b) => (a.decision === b.decision ? b.netApr - a.netApr : a.decision === 'ACCEPTED' ? -1 : 1));
 }
@@ -299,6 +315,7 @@ export function buildS2Candidates(
             payouts: buildPayouts(pct(Math.max(0, spreadHourly)), totalCostPct),
             breakevenHours: spreadHourly > 0 ? totalCostPct / pct(spreadHourly) : null,
             narrative: { zh: '跨所策略（本期未启用）', en: 'Cross-venue (disabled this phase)' },
+            tags: [],
           },
           extraCodes,
         ),
