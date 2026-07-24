@@ -46,6 +46,36 @@ export async function fetchPerpSnapshots(): Promise<HlPerpSnapshot[]> {
     .filter((s): s is HlPerpSnapshot => s !== null && Number.isFinite(s.hourlyFunding));
 }
 
+export interface HlSpotSnapshot {
+  pair: string;
+  baseToken: string;
+  midPx: number;
+  dayNotionalVolume: number;
+}
+
+interface SpotMetaAndAssetCtxsResponse {
+  0: { tokens: { name: string; index: number }[]; universe: { name: string; tokens: [number, number]; index: number }[] };
+  1: { midPx: string | null; dayNtlVlm: string; markPx: string | null }[];
+}
+
+/** 现货市场快照（S1 现货腿用；HL 现货 BTC/ETH/SOL 为包装资产 UBTC/UETH/USOL） */
+export async function fetchSpotSnapshots(): Promise<HlSpotSnapshot[]> {
+  const [meta, ctxs] = (await postJson<SpotMetaAndAssetCtxsResponse>(infoUrl(), { type: 'spotMetaAndAssetCtxs' })) as unknown as [
+    SpotMetaAndAssetCtxsResponse[0],
+    SpotMetaAndAssetCtxsResponse[1],
+  ];
+  const tokenName = new Map(meta.tokens.map((t) => [t.index, t.name]));
+  return meta.universe
+    .map((u) => {
+      const ctx = ctxs[u.index];
+      const base = tokenName.get(u.tokens[0]);
+      const quote = tokenName.get(u.tokens[1]);
+      if (!ctx?.midPx || !base || quote !== 'USDC') return null;
+      return { pair: `${base}/USDC`, baseToken: base, midPx: Number(ctx.midPx), dayNotionalVolume: Number(ctx.dayNtlVlm) };
+    })
+    .filter((s): s is HlSpotSnapshot => s !== null);
+}
+
 type PredictedFundingsResponse = [string, [string, { fundingRate: string; nextFundingTime: number; fundingIntervalHours?: number } | null][]][];
 
 /** 官方聚合的多所预测费率（HL/Binance/Bybit 等），跨所费率差策略的数据源 */

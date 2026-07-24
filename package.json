@@ -8,7 +8,8 @@
     "dev": "tsx src/index.ts",
     "scan": "tsx src/index.ts --once",
     "typecheck": "tsc --noEmit",
-    "ainj": "ainj"
+    "ainj": "ainj",
+    "web": "tsx src/web/server.ts"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CarryPilot · 成本后资金费率研究</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --dim:#8b949e;
+          --green:#3fb950; --red:#f85149; --amber:#d29922; --blue:#58a6ff; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--text); font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; padding:24px; max-width:1100px; margin:0 auto; }
+  h1 { font-size:22px; } h1 small { color:var(--dim); font-weight:400; font-size:13px; margin-left:10px; }
+  .journey { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 20px; }
+  .journey .step { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:13px; }
+  .journey .step b { color:var(--blue); margin-right:6px; }
+  .journey .arrow { color:var(--dim); align-self:center; }
+  .meta { color:var(--dim); font-size:12px; margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap; }
+  .meta .ok::before { content:"● "; color:var(--green); } .meta .failed::before { content:"● "; color:var(--red); }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  th,td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  th { color:var(--dim); font-weight:500; font-size:12px; }
+  tbody tr { cursor:pointer; } tbody tr:hover { background:#1c2129; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; }
+  .ACCEPTED { background:rgba(63,185,80,.15); color:var(--green); }
+  .REJECTED { background:rgba(139,148,158,.15); color:var(--dim); }
+  .pos { color:var(--green); } .neg { color:var(--red); }
+  .gross { color:var(--dim); text-decoration:line-through rgba(248,81,73,.6); }
+  #detail { position:fixed; top:0; right:-520px; width:min(520px,100vw); height:100vh; background:var(--panel);
+            border-left:1px solid var(--border); padding:24px; overflow-y:auto; transition:right .25s; z-index:10; }
+  #detail.open { right:0; box-shadow:-8px 0 24px rgba(0,0,0,.5); }
+  #detail h2 { font-size:17px; margin-bottom:4px; } #detail .close { float:right; cursor:pointer; color:var(--dim); font-size:20px; }
+  .leg { border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:10px 0; font-size:13px; }
+  .leg .side-long { color:var(--green); font-weight:600; } .leg .side-short { color:var(--red); font-weight:600; }
+  .bar { display:flex; align-items:center; gap:8px; margin:6px 0; font-size:12px; }
+  .bar .track { flex:1; height:10px; background:#21262d; border-radius:5px; overflow:hidden; }
+  .bar .fill { height:100%; border-radius:5px; }
+  .section-title { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.05em; margin:18px 0 6px; }
+  .codebox { background:rgba(248,81,73,.1); border:1px solid rgba(248,81,73,.4); color:var(--red); border-radius:6px; padding:8px 12px; font-size:13px; margin:8px 0; }
+  .flag { display:inline-block; background:rgba(210,153,34,.15); color:var(--amber); border-radius:6px; padding:1px 8px; font-size:12px; margin-right:6px; }
+  .disclaimer { color:var(--dim); font-size:12px; border-top:1px solid var(--border); margin-top:26px; padding-top:12px; }
+  .net-big { font-size:26px; font-weight:700; margin:6px 0; }
+  @media (max-width:720px){ th:nth-child(6),td:nth-child(6){display:none} }
+</style>
+</head>
+<body>
+<h1>CarryPilot <small>成本后资金费率研究 · Cost-aware Funding Carry Research · <span id="net-label"></span></small></h1>
+
+<div class="journey">
+  <div class="step"><b>①</b>连接 4 个市场实时数据</div><div class="arrow">→</div>
+  <div class="step"><b>②</b>确定性引擎扣除全部成本</div><div class="arrow">→</div>
+  <div class="step"><b>③</b>风控硬门：不合格就明确拒绝</div><div class="arrow">→</div>
+  <div class="step"><b>④</b>点击候选查看两腿与成本瀑布</div>
+</div>
+
+<div class="meta" id="meta">加载中 loading…</div>
+<table>
+  <thead><tr><th>决策</th><th>策略</th><th>资产</th><th>结构</th><th>毛APR (幻觉口径)</th><th>成本 /24h</th><th>建模净APR</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+
+<div id="detail"></div>
+<div class="disclaimer" id="disclaimer"></div>
+
+<script>
+const fmt = (x, d=2) => (x>=0?'+':'') + x.toFixed(d) + '%';
+let DATA = null;
+
+async function load() {
+  const r = await fetch('/api/scan'); DATA = await r.json();
+  document.getElementById('net-label').textContent = DATA.network + ' · engine ' + DATA.engineVersion;
+  document.getElementById('meta').innerHTML =
+    '数据时点 ' + new Date(DATA.generatedAt).toLocaleString() + ' (60s缓存) · ' +
+    DATA.sources.map(s => `<span class="${s.status}">${s.name}</span>`).join(' ');
+  document.getElementById('disclaimer').textContent = '⚠ ' + DATA.disclaimer;
+  const rows = DATA.candidates.map((c,i) => `
+    <tr onclick="show(${i})">
+      <td><span class="tag ${c.decision}">${c.decision==='ACCEPTED'?'✔ 通过':'✖ 拒绝'}</span></td>
+      <td>${c.strategy==='S1_SPOT_PERP'?'S1 现货-永续':'S2 跨所永续'}</td>
+      <td><b>${c.asset}</b></td>
+      <td style="white-space:normal">${c.legs.map(l=>`${l.side==='long'?'多':'空'}·${l.venue}`).join(' + ')}</td>
+      <td class="gross">${fmt(c.grossApr)}</td>
+      <td class="neg">-${c.totalCostPct.toFixed(3)}%</td>
+      <td class="${c.netApr>0?'pos':'neg'}"><b>${fmt(c.netApr)}</b></td>
+    </tr>`).join('');
+  document.getElementById('rows').innerHTML = rows || '<tr><td colspan="7">当前无候选（数据源不可用）</td></tr>';
+}
+
+function show(i) {
+  const c = DATA.candidates[i];
+  const maxCost = Math.max(...c.costs.map(x=>x.pct), 0.001);
+  document.getElementById('detail').innerHTML = `
+    <span class="close" onclick="document.getElementById('detail').classList.remove('open')">✕</span>
+    <h2>${c.asset} · ${c.strategy==='S1_SPOT_PERP'?'S1 同平台现货-永续':'S2 跨平台永续-永续'}</h2>
+    <span class="tag ${c.decision}">${c.decision}</span>
+    ${c.flags.map(f=>`<span class="flag">${f}</span>`).join('')}
+    ${c.rejectionCodes.length?`<div class="codebox">拒绝原因: ${c.rejectionCodes.join(', ')}<br><small>「没有机会」也是有效研究结论 — 成本或风险不通过时明确拒绝，而不是给你一个幻觉 APR。</small></div>`:''}
+    <div class="section-title">两条腿 · Delta 中性结构</div>
+    ${c.legs.map(l=>`<div class="leg">
+        <span class="side-${l.side}">${l.side==='long'?'▲ 做多':'▼ 做空'}</span>
+        ${l.venue} · ${l.market} · ${l.instrument}
+        ${l.price?` · 价格 ${l.price.toLocaleString()}`:''}
+        ${l.hourlyFundingPct!==null?` · funding ${fmt(l.hourlyFundingPct,4)}/h`:''}
+        ${l.note?` · <small>${l.note}</small>`:''}
+      </div>`).join('')}
+    <div class="section-title">收益与成本瀑布（持有 ${c.horizonHours}h，% 名义本金）</div>
+    <div class="bar"><span style="width:180px">毛 funding 收入</span>
+      <div class="track"><div class="fill" style="width:100%;background:var(--green)"></div></div>
+      <b class="pos">+${c.grossFundingPct.toFixed(3)}%</b></div>
+    ${c.costs.map(x=>`<div class="bar"><span style="width:180px">${x.label}</span>
+      <div class="track"><div class="fill" style="width:${Math.min(100,x.pct/maxCost*100)}%;background:var(--red)"></div></div>
+      <b class="neg">-${x.pct.toFixed(3)}%</b></div>`).join('')}
+    <div class="section-title">建模净结果 Modeled Net（非实际收益）</div>
+    <div class="net-big ${c.netApr>0?'pos':'neg'}">${fmt(c.netHorizonPct,3)} / ${c.horizonHours}h ≈ ${fmt(c.netApr)} APR</div>
+    <div style="color:var(--dim);font-size:12px">成本覆盖比 ${c.costCoverage.toFixed(2)}（入场门槛 ≥ 2.0） · 毛APR ${fmt(c.grossApr)} 仅为机械口径，禁止当作可实现收益</div>`;
+  document.getElementById('detail').classList.add('open');
+}
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
