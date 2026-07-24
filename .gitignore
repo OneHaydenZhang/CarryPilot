@@ -1,0 +1,12 @@
+node_modules/
+vendor/
+.env
+.env.*
+!.env.example
+dist/
+*.log
+.DS_Store
+data/*.sqlite*
+
+# 运行时产物（含 KILL/heartbeat/台账，永不入库）
+data/

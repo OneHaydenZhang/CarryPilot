@@ -1,0 +1,27 @@
+{
+  "name": "kuroai-inj",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hyperliquid × Injective arbitrage AI platform",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "scan": "tsx src/index.ts --once",
+    "typecheck": "tsc --noEmit",
+    "ainj": "ainj"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@injectivelabs/ainj": "^0.1.0",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@injectivelabs/networks": "^1.20.26",
+    "@injectivelabs/sdk-ts": "^1.20.26",
+    "zod": "^4.4.3"
+  }
+}

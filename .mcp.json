@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "injective-docs": {
+      "type": "http",
+      "url": "https://docs.injective.network/mcp"
+    },
+    "injective": {
+      "command": "node",
+      "args": ["vendor/injective-mcp-server/dist/mcp/server.js"],
+      "env": {
+        "INJECTIVE_NETWORK": "mainnet"
+      }
+    }
+  }
+}
