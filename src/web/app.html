@@ -307,12 +307,16 @@ function toggleTheme(){applyTheme(document.documentElement.dataset.theme==='ligh
 applyTheme(localStorage.getItem('cp_theme')||'dark');
 
 /* ---------- tabs & filters ---------- */
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+function selectTab(v){
+  const t=document.querySelector('.tab[data-v="'+v+'"]');if(!t)return;
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
-  t.classList.add('on'); $('v-'+t.dataset.v).classList.add('on');
-  if(t.dataset.v==='risk') loadLiveAccount();
-});
+  t.classList.add('on'); $('v-'+v).classList.add('on');
+  if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);
+  if(v==='risk') loadLiveAccount();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.v));
+if(location.hash&&document.querySelector('.tab[data-v="'+location.hash.slice(1)+'"]'))selectTab(location.hash.slice(1));
 document.querySelectorAll('.chip[data-f]').forEach(c=>c.onclick=()=>{
   document.querySelectorAll('.chip[data-f]').forEach(x=>x.classList.remove('on'));
   c.classList.add('on');FILTER=c.dataset.f;SELECTED=null;$('opp-detail').style.display='none';renderScan();
