@@ -82,16 +82,25 @@ function decide(candidate: Omit<Candidate, 'decision' | 'rejectionCodes'>, extra
   return { ...candidate, decision: codes.length ? 'REJECTED' : 'ACCEPTED', rejectionCodes: codes };
 }
 
-/** S1：HL 现货多（包装资产） + HL 永续空，收正 funding */
+/**
+ * S1：HL 站内现货多 + 永续空，收正 funding（第一版产品主线，不做跨所）。
+ * universe 动态发现：HL 上所有「现货(USDC对) + 永续」同时存在的币；核心三币始终展示。
+ */
 export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnapshot[], observedAt: string): Candidate[] {
   const out: Candidate[] = [];
-  for (const asset of CONFIG.universe) {
+  const spotByBase = new Map(hlSpots.map((s) => [s.baseToken, s]));
+  const assets = new Set<string>(CONFIG.universe);
+  for (const perp of hlPerps) {
+    if (spotByBase.has(perp.coin) || spotByBase.has(CONFIG.wrapperMap[perp.coin] ?? '')) assets.add(perp.coin);
+  }
+  for (const asset of assets) {
     const perp = hlPerps.find((p) => p.coin === asset);
     if (!perp) continue;
     const wrapperToken = CONFIG.wrapperMap[asset];
-    const spot = hlSpots.find((s) => s.baseToken === wrapperToken);
+    const spot = spotByBase.get(asset) ?? (wrapperToken ? spotByBase.get(wrapperToken) : undefined);
     const extraCodes: string[] = [];
-    const flags: string[] = ['wrapper_risk'];
+    const flags: string[] = [];
+    if (spot && spot.baseToken !== asset) flags.push('wrapper_risk');
 
     if (!spot) extraCodes.push('REJECTED_MAPPING');
     if (perp.hourlyFunding <= 0) extraCodes.push('REJECTED_UNSUPPORTED'); // 负funding现货空头不在P0
@@ -109,7 +118,7 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
           strategy: 'S1_SPOT_PERP',
           asset,
           legs: [
-            { venue: 'hyperliquid', market: spot ? spot.pair : `${wrapperToken}/USDC (未上市)`, instrument: 'spot', side: 'long', price: spot?.midPx ?? null, hourlyFundingPct: null, note: '包装资产' },
+            { venue: 'hyperliquid', market: spot ? spot.pair : `${wrapperToken ?? asset}/USDC (未上市)`, instrument: 'spot', side: 'long', price: spot?.midPx ?? null, hourlyFundingPct: null, note: flags.includes('wrapper_risk') ? '包装资产' : undefined },
             { venue: 'hyperliquid', market: `${asset}-PERP`, instrument: 'perp', side: 'short', price: perp.markPx, hourlyFundingPct: pct(perp.hourlyFunding) },
           ],
           horizonHours: CONFIG.horizonHours,

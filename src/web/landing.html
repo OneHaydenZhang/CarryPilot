@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CarryPilot — AI 资金费率套利 Agent</title>
+<style>
+  :root{--bg:#0a0e14;--panel:#12171f;--border:#232b36;--text:#e8eef5;--dim:#8b98a5;--green:#2ee6a8;--blue:#4d9fff;--amber:#ffb454;}
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+  nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+  .logo{font-size:18px;font-weight:700}.logo span{color:var(--green)}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:12px 28px;border-radius:10px;text-decoration:none;border:none;font-size:15px;cursor:pointer}
+  .btn.ghost{background:none;border:1px solid var(--border);color:var(--text);font-weight:500}
+  .hero{text-align:center;padding:72px 0 48px}
+  .hero h1{font-size:44px;line-height:1.25;margin-bottom:18px}
+  .hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--green),#1bc4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--dim);max-width:640px;margin:0 auto 30px;font-size:17px}
+  .badges{display:flex;gap:10px;justify-content:center;margin-bottom:34px;flex-wrap:wrap}
+  .badge{border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:13px;color:var(--dim)}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:56px 0}
+  .step{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px}
+  .step .num{color:var(--green);font-weight:700;font-size:13px;margin-bottom:8px}
+  .step h3{font-size:16px;margin-bottom:6px}.step p{color:var(--dim);font-size:13px}
+  h2.sec{text-align:center;font-size:28px;margin:64px 0 8px}
+  p.sub{text-align:center;color:var(--dim);margin-bottom:30px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px}
+  .card h3{font-size:16px;margin-bottom:8px}.card h3 .ico{margin-right:8px}
+  .card p{color:var(--dim);font-size:14px}
+  .logic{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:28px;margin:20px 0;font-size:15px}
+  .logic b{color:var(--green)}
+  footer{border-top:1px solid var(--border);margin-top:80px;padding:28px 0;color:var(--dim);font-size:12px;text-align:center}
+  @media(max-width:640px){.hero h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo">🛩️ Carry<span>Pilot</span></div>
+    <div><a class="btn ghost" href="https://github.com/OneHaydenZhang/KuroAI-INJ" style="margin-right:10px">GitHub</a><a class="btn" href="/app">Launch App</a></div>
+  </nav>
+
+  <div class="hero">
+    <h1>不预测涨跌，<br>让 Agent 帮你<em>收资金费率</em></h1>
+    <p>CarryPilot 在 Hyperliquid 上执行市场中性套利：现货多 + 永续空对冲掉价格风险，AI Agent 负责发现机会、扣除真实成本、评估可持续性，然后自动开单、持续观测、见坏就撤。</p>
+    <div class="badges"><span class="badge">Δ 市场中性</span><span class="badge">成本后净收益口径</span><span class="badge">LLM 评估 + 确定性风控</span><span class="badge">API Wallet 无提币权限</span></div>
+    <a class="btn" href="/app" style="font-size:17px;padding:14px 40px">开始使用 →</a>
+  </div>
+
+  <h2 class="sec">用户动线</h2>
+  <p class="sub">连接钱包到收到收益，四步完成</p>
+  <div class="flow">
+    <div class="step"><div class="num">STEP 1</div><h3>连接钱包</h3><p>MetaMask 签名登录，仅做身份识别。无交易、无 gas、不触碰资金。</p></div>
+    <div class="step"><div class="num">STEP 2</div><h3>创建 Agent</h3><p>选资产、选风格（保守/均衡/激进）、设资金。模拟盘一键开跑；实盘需授权无提币权限的 API Wallet。</p></div>
+    <div class="step"><div class="num">STEP 3</div><h3>Agent 自主运行</h3><p>每 60 秒扫描全市场费率 → 扣除全部成本 → LLM 评估可持续性 → 通过风控硬门才开单，每一步决策可见。</p></div>
+    <div class="step"><div class="num">STEP 4</div><h3>观测与收益</h3><p>收益中心看 PnL 曲线与结算记录，风险中心盯费率翻转与清算距离。费率恶化 Agent 自动平仓。</p></div>
+  </div>
+
+  <h2 class="sec">套利逻辑，大白话</h2>
+  <div class="logic">
+    永续合约价格要贴住现货价，靠的是多空双方每小时互付「资金费」。费率为正时，<b>做多的人付钱给做空的人</b>。
+    CarryPilot 同时<b>买入现货 + 做空等值永续</b>：币价涨跌两边抵消（市场中性），专门收这笔小时费。
+    坑在于页面上的「年化 60%」是不扣成本的毛数——四条腿手续费+滑点很容易把它吃光。
+    所以系统先用<b>保守成本模型杀掉假机会</b>，LLM 再判断费率能不能持续，都通过了 Agent 才真正开单。
+  </div>
+
+  <h2 class="sec">五大中心</h2>
+  <div class="grid">
+    <div class="card"><h3><span class="ico">📡</span>费率现状中心</h3><p>Hyperliquid 全市场实时资金费率、年化与未平仓量，现货可对冲标的一目了然。</p></div>
+    <div class="card"><h3><span class="ico">🔬</span>套利机会中心</h3><p>确定性引擎逐个计算成本后净APR，通过标绿、不通过给出机器可读拒绝码与成本瀑布。</p></div>
+    <div class="card"><h3><span class="ico">🤖</span>Agent 中心</h3><p>创建与管理你的套利 Agent，查看每个 tick 的决策日志：为什么开、为什么不开、LLM 怎么说。</p></div>
+    <div class="card"><h3><span class="ico">📈</span>收益中心</h3><p>PnL 曲线、累计资金费收入、平仓记录与防篡改 Receipt 哈希，实盘账户同步。</p></div>
+    <div class="card"><h3><span class="ico">🛡️</span>风险中心</h3><p>持仓风险分级（费率翻转/亏损越界/执行风险）、实盘清算价距离与保证金观测。</p></div>
+  </div>
+
+  <footer>
+    ⚠ 本平台输出为研究结论与模拟/实盘执行记录，不构成投资建议或收益承诺。实盘模式请仅使用可承受损失的资金。<br>
+    CarryPilot · Hyperliquid 站内资金费率套利 · AdventureX 2026
+  </footer>
+</div>
+</body>
+</html>

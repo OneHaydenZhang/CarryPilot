@@ -1,98 +1,267 @@
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { config } from '../config.js';
 import { log } from '../lib/logger.js';
-import { fetchPerpSnapshots, fetchPredictedFundings, fetchSpotSnapshots } from '../connectors/hyperliquid.js';
-import { fetchInjPerpSnapshots } from '../connectors/injective.js';
-import { buildS1Candidates, buildS2Candidates, ENGINE_VERSION, CONFIG } from '../core/candidates.js';
+import { issueNonce, verifyAndIssueToken, authenticate } from '../lib/auth.js';
+import { fetchPerpSnapshots, fetchSpotSnapshots, type HlPerpSnapshot, type HlSpotSnapshot } from '../connectors/hyperliquid.js';
+import { buildS1Candidates, ENGINE_VERSION, CONFIG, type Candidate } from '../core/candidates.js';
+import { loadStore, saveStore, store } from '../core/store.js';
+import { tickAgents, closePosition, viewPosition, STYLE_PARAMS, LIMITS, type LiveExecutor } from '../core/agents.js';
+import { llmEnabled } from '../core/llm.js';
+import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINTS } from '../core/points.js';
+import { buildApproveAgentTypedData, submitApproveAgent, liveOpenCarry, liveCloseCarry, fetchLiveAccount, getOrCreateAgentWallet } from '../connectors/hlExchange.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const CACHE_TTL_MS = 60_000;
 const __dir = dirname(fileURLToPath(import.meta.url));
-const indexHtml = readFileSync(join(__dir, 'index.html'));
+const pages = {
+  landing: readFileSync(join(__dir, 'landing.html')),
+  app: readFileSync(join(__dir, 'app.html')),
+};
 
 const DISCLAIMER =
-  '本结果用于研究与模拟，不构成投资建议、收益承诺、荐币、代客理财或适合性判断。资金费率、基差、滑点、流动性和保证金风险可能快速变化；历史与 paper 结果不代表未来表现。';
+  '本平台输出为研究结论与模拟/实盘执行记录，不构成投资建议或收益承诺。资金费率、滑点、流动性与保证金风险可能快速变化。实盘模式使用无提币权限的 API wallet，仍存在交易亏损风险，请仅使用可承受损失的资金。';
 
-interface ScanPayload {
+// ---------- 扫描缓存 ----------
+interface ScanState {
   generatedAt: string;
-  network: string;
-  engineVersion: string;
-  horizonHours: number;
-  sources: { name: string; status: 'ok' | 'failed'; detail?: string }[];
-  candidates: unknown[];
-  disclaimer: string;
+  candidates: Candidate[];
+  perps: HlPerpSnapshot[];
+  spots: HlSpotSnapshot[];
+  sourcesOk: boolean;
 }
+let scan: ScanState | null = null;
+let scanning: Promise<ScanState> | null = null;
 
-let cache: { at: number; payload: ScanPayload } | null = null;
-let scanning: Promise<ScanPayload> | null = null;
-
-async function runScan(): Promise<ScanPayload> {
+async function refreshScan(): Promise<ScanState> {
   const observedAt = new Date().toISOString();
-  const [perps, spots, predicted, inj] = await Promise.allSettled([
-    fetchPerpSnapshots(),
-    fetchSpotSnapshots(),
-    fetchPredictedFundings(),
-    fetchInjPerpSnapshots(),
-  ]);
-  const sources: ScanPayload['sources'] = [
-    { name: 'Hyperliquid perps (实时)', status: perps.status === 'fulfilled' ? 'ok' : 'failed' },
-    { name: 'Hyperliquid spot (实时)', status: spots.status === 'fulfilled' ? 'ok' : 'failed' },
-    { name: 'Binance/Bybit predicted (经HL聚合)', status: predicted.status === 'fulfilled' ? 'ok' : 'failed' },
-    { name: 'Injective 链上LCD (估算)', status: inj.status === 'fulfilled' ? 'ok' : 'failed' },
-  ];
-  const hlPerps = perps.status === 'fulfilled' ? perps.value : [];
-  if (!hlPerps.length) throw new Error('primary data source (HL) failed');
-
-  const candidates = [
-    ...buildS1Candidates(hlPerps, spots.status === 'fulfilled' ? spots.value : [], observedAt),
-    ...buildS2Candidates(hlPerps, predicted.status === 'fulfilled' ? predicted.value : [], inj.status === 'fulfilled' ? inj.value : [], observedAt),
-  ];
-  return {
-    generatedAt: observedAt,
-    network: config.network,
-    engineVersion: ENGINE_VERSION,
-    horizonHours: CONFIG.horizonHours,
-    sources,
-    candidates,
-    disclaimer: DISCLAIMER,
-  };
+  const [perpsR, spotsR] = await Promise.allSettled([fetchPerpSnapshots(), fetchSpotSnapshots()]);
+  if (perpsR.status === 'rejected') throw new Error('HL perps source failed');
+  const perps = perpsR.value;
+  const spots = spotsR.status === 'fulfilled' ? spotsR.value : [];
+  const candidates = buildS1Candidates(perps, spots, observedAt);
+  scan = { generatedAt: observedAt, candidates, perps, spots, sourcesOk: spotsR.status === 'fulfilled' };
+  return scan;
 }
-
-async function getScan(): Promise<ScanPayload> {
-  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.payload;
-  scanning ??= runScan()
-    .then((payload) => {
-      cache = { at: Date.now(), payload };
-      return payload;
-    })
-    .finally(() => (scanning = null));
+async function getScan(): Promise<ScanState> {
+  if (scan && Date.now() - Date.parse(scan.generatedAt) < CACHE_TTL_MS) return scan;
+  scanning ??= refreshScan().finally(() => (scanning = null));
   return scanning;
 }
 
-const server = createServer(async (req, res) => {
-  const url = req.url ?? '/';
+// ---------- helpers ----------
+function json(res: ServerResponse, code: number, body: unknown): void {
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
+async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
   try {
-    if (url === '/api/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', engineVersion: ENGINE_VERSION, cachedAt: cache?.payload.generatedAt ?? null }));
-      return;
+    return JSON.parse(Buffer.concat(chunks).toString() || '{}');
+  } catch {
+    return {};
+  }
+}
+const spotByBase = () => new Map((scan?.spots ?? []).map((s) => [s.baseToken, s]));
+
+// ---------- 路由 ----------
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url ?? '/', 'http://x');
+  const path = url.pathname;
+  try {
+    if (path === '/') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.landing);
+    if (path === '/app') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.app);
+    if (path === '/api/health') return json(res, 200, { status: 'ok', engineVersion: ENGINE_VERSION, network: config.network });
+
+    if (path === '/api/scan') {
+      const s = await getScan();
+      const sb = spotByBase();
+      const rates = s.perps
+        .map((p) => ({
+          coin: p.coin,
+          hourlyFundingPct: p.hourlyFunding * 100,
+          annualizedPct: p.hourlyFunding * 24 * 365 * 100,
+          markPx: p.markPx,
+          oiUsd: Math.round(p.openInterest * p.markPx),
+          hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
+        }))
+        .sort((a, b) => Math.abs(b.hourlyFundingPct) - Math.abs(a.hourlyFundingPct));
+      return json(res, 200, {
+        generatedAt: s.generatedAt,
+        network: config.network,
+        engineVersion: ENGINE_VERSION,
+        horizonHours: CONFIG.horizonHours,
+        llm: { enabled: llmEnabled(), model: process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat' },
+        candidates: s.candidates,
+        rates: rates.slice(0, 60),
+        disclaimer: DISCLAIMER,
+      });
     }
-    if (url === '/api/scan') {
-      const payload = await getScan();
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify(payload));
-      return;
+
+    if (path === '/api/auth/nonce') {
+      const address = url.searchParams.get('address') ?? '';
+      if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return json(res, 400, { error: 'bad address' });
+      return json(res, 200, issueNonce(address));
     }
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(indexHtml);
+    if (path === '/api/auth/verify' && req.method === 'POST') {
+      const b = await readBody(req);
+      const token = await verifyAndIssueToken(String(b.address ?? ''), String(b.signature ?? '') as `0x${string}`);
+      return token ? json(res, 200, { token }) : json(res, 401, { error: 'signature verification failed' });
+    }
+
+    // ---- 以下需登录 ----
+    const owner = authenticate(req.headers.authorization);
+    if (!owner) return json(res, 401, { error: 'unauthorized' });
+
+    if (path === '/api/me') {
+      grantWelcomeIfNew(owner);
+      const agents = store.agents.filter((a) => a.owner === owner);
+      const positions = store.positions.filter((p) => p.owner === owner).map(viewPosition);
+      const wallet = store.wallets.find((w) => w.owner === owner);
+      const totalPnl = positions.reduce((a, p) => a + p.pnlUsd, 0);
+      const openCount = positions.filter((p) => p.status === 'OPEN').length;
+      return json(res, 200, {
+        address: owner,
+        agents,
+        positions,
+        styleParams: STYLE_PARAMS,
+        limits: LIMITS,
+        llmEnabled: llmEnabled(),
+        live: { agentAddress: wallet?.agentAddress ?? null, approved: Boolean(wallet?.approvedAt) },
+        summary: { totalPnl, openCount, fundingAccrued: positions.reduce((a, p) => a + p.fundingAccruedUsd, 0) },
+        points: { balance: balanceOf(owner), perTick: POINTS.perTick, rateInj: POINTS.rateInj, treasury: treasuryInj(), depositFromInj: (await import('../lib/bech32.js')).ethToInj(owner) },
+      });
+    }
+
+    if (path === '/api/points') {
+      return json(res, 200, { balance: balanceOf(owner), history: historyOf(owner), treasury: treasuryInj(), rateInj: POINTS.rateInj, perTick: POINTS.perTick });
+    }
+    if (path === '/api/points/refresh' && req.method === 'POST') {
+      const r = await scanDepositsFor(owner);
+      return json(res, 200, { ...r, balance: balanceOf(owner) });
+    }
+
+    if (path === '/api/agents' && req.method === 'POST') {
+      const b = await readBody(req);
+      const mine = store.agents.filter((a) => a.owner === owner);
+      if (mine.length >= LIMITS.maxAgentsPerUser) return json(res, 400, { error: `每个用户最多 ${LIMITS.maxAgentsPerUser} 个 Agent` });
+      const mode = b.mode === 'LIVE' ? 'LIVE' : 'PAPER';
+      const cap = mode === 'LIVE' ? LIMITS.maxLiveCapitalUsd : LIMITS.maxPaperCapitalUsd;
+      const capitalUsd = Math.min(Math.max(Number(b.capitalUsd) || 0, LIMITS.minCapitalUsd), cap);
+      if (mode === 'LIVE' && !store.wallets.find((w) => w.owner === owner)?.approvedAt)
+        return json(res, 400, { error: '实盘模式需先完成 API Wallet 授权（收益中心→实盘设置）' });
+      const style = ['conservative', 'balanced', 'aggressive'].includes(String(b.style)) ? (b.style as keyof typeof STYLE_PARAMS) : 'balanced';
+      const agent = {
+        id: crypto.randomUUID().slice(0, 8),
+        owner,
+        name: String(b.name || `Agent-${mine.length + 1}`).slice(0, 30),
+        asset: String(b.asset || 'ALL').toUpperCase(),
+        style,
+        capitalUsd,
+        mode: mode as 'PAPER' | 'LIVE',
+        status: 'RUNNING' as const,
+        createdAt: new Date().toISOString(),
+        log: [{ at: new Date().toISOString(), msg: `Agent 创建（${mode === 'LIVE' ? '实盘' : '模拟'} · ${STYLE_PARAMS[style].label} · $${capitalUsd}）` }],
+        equitySeries: [],
+      };
+      store.agents.push(agent);
+      saveStore();
+      return json(res, 200, { agent });
+    }
+
+    if (path === '/api/agents/action' && req.method === 'POST') {
+      const b = await readBody(req);
+      const agent = store.agents.find((a) => a.id === b.id && a.owner === owner);
+      if (!agent) return json(res, 404, { error: 'agent not found' });
+      const open = store.positions.find((p) => p.agentId === agent.id && p.status === 'OPEN');
+      if (b.action === 'stop') {
+        agent.status = 'STOPPED';
+        if (open) {
+          if (open.mode === 'LIVE') {
+            try {
+              const r = await liveCloseCarry(owner, open);
+              open.fills = [...(open.fills ?? []), ...r.fills];
+            } catch (err) {
+              agent.log.push({ at: new Date().toISOString(), msg: `⚠ 停止时实盘平仓失败: ${String(err).slice(0, 100)}` });
+              saveStore();
+              return json(res, 500, { error: '实盘平仓失败，Agent 已停止但仓位仍在，请稍后手动平仓' });
+            }
+          }
+          closePosition(open, 'AGENT_STOPPED');
+        }
+      } else if (b.action === 'start') agent.status = 'RUNNING';
+      else if (b.action === 'delete') {
+        if (open) return json(res, 400, { error: '有持仓的 Agent 不能删除，请先停止' });
+        store.agents.splice(store.agents.indexOf(agent), 1);
+      }
+      saveStore();
+      return json(res, 200, { ok: true });
+    }
+
+    if (path === '/api/positions/close' && req.method === 'POST') {
+      const b = await readBody(req);
+      const pos = store.positions.find((p) => p.id === b.id && p.owner === owner && p.status === 'OPEN');
+      if (!pos) return json(res, 404, { error: 'position not found' });
+      if (pos.mode === 'LIVE') {
+        try {
+          const r = await liveCloseCarry(owner, pos);
+          pos.fills = [...(pos.fills ?? []), ...r.fills];
+        } catch (err) {
+          return json(res, 500, { error: `实盘平仓失败: ${String(err).slice(0, 150)}` });
+        }
+      }
+      closePosition(pos, 'MANUAL');
+      saveStore();
+      return json(res, 200, { position: viewPosition(pos) });
+    }
+
+    if (path === '/api/live/typed-data' && req.method === 'POST') {
+      const b = await readBody(req);
+      const chainIdHex = String(b.chainIdHex || '0x1');
+      return json(res, 200, buildApproveAgentTypedData(owner, chainIdHex));
+    }
+    if (path === '/api/live/approve' && req.method === 'POST') {
+      const b = await readBody(req);
+      try {
+        await submitApproveAgent(owner, b.action as Record<string, unknown>, String(b.signature) as `0x${string}`);
+        return json(res, 200, { ok: true, agentAddress: getOrCreateAgentWallet(owner).agentAddress });
+      } catch (err) {
+        return json(res, 400, { error: String(err).slice(0, 250) });
+      }
+    }
+    if (path === '/api/live/account') {
+      try {
+        return json(res, 200, await fetchLiveAccount(owner));
+      } catch (err) {
+        return json(res, 502, { error: String(err).slice(0, 200) });
+      }
+    }
+
+    return json(res, 404, { error: 'not found' });
   } catch (err) {
-    log.error('http_error', { url, error: String(err) });
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'internal error' }));
+    log.error('http_error', { path, error: String(err) });
+    return json(res, 500, { error: 'internal error' });
   }
 });
 
-server.listen(PORT, () => log.info('web_up', { port: PORT, network: config.network }));
+// ---------- Agent 引擎循环 ----------
+const liveExecutor: LiveExecutor = {
+  openCarry: liveOpenCarry,
+  closeCarry: liveCloseCarry,
+};
+async function engineLoop(): Promise<void> {
+  try {
+    const s = await getScan();
+    await tickAgents(s.candidates, liveExecutor);
+  } catch (err) {
+    log.error('engine_tick_failed', { error: String(err) });
+  }
+}
+
+loadStore();
+server.listen(PORT, () => log.info('web_up', { port: PORT, network: config.network, llm: llmEnabled() }));
+void engineLoop();
+setInterval(engineLoop, 60_000);
