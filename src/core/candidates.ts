@@ -39,6 +39,16 @@ export interface CostItem {
   pct: number; // 占名义本金百分比（往返合计）
 }
 
+export interface Payout {
+  notionalUsd: number;
+  fundingPer8hUsd: number;
+  fundingPerDayUsd: number;
+  fundingPerWeekUsd: number;
+  oneTimeCostUsd: number;
+  netPerDayUsd: number;
+  netPerWeekUsd: number;
+}
+
 export interface Candidate {
   id: string;
   strategy: 'S1_SPOT_PERP' | 'S2_PERP_PERP';
@@ -59,6 +69,69 @@ export interface Candidate {
   rejectionCodes: string[];
   flags: string[];
   observedAt: string;
+  /** 确定性生成的现状阐述（是否有机会、组合是什么、为什么） */
+  narrative: { zh: string; en: string };
+  /** 大白话收益表：不同投入下每 8h/天/周 的规模 */
+  payouts: Payout[];
+  /** 费率维持不变时回本所需小时数（覆盖往返成本） */
+  breakevenHours: number | null;
+}
+
+const PAYOUT_NOTIONALS = [1000, 5000, 10000, 20000];
+
+function buildPayouts(hourlyFundingPct: number, totalCostPct: number): Payout[] {
+  return PAYOUT_NOTIONALS.map((n) => {
+    const perHour = (n * hourlyFundingPct) / 100;
+    const oneTime = (n * totalCostPct) / 100;
+    return {
+      notionalUsd: n,
+      fundingPer8hUsd: perHour * 8,
+      fundingPerDayUsd: perHour * 24,
+      fundingPerWeekUsd: perHour * 168,
+      oneTimeCostUsd: oneTime,
+      netPerDayUsd: perHour * 24 - oneTime,
+      netPerWeekUsd: perHour * 168 - oneTime,
+    };
+  });
+}
+
+function buildNarrative(
+  asset: string,
+  hourlyPct: number,
+  grossApr: number,
+  netApr: number,
+  coverage: number,
+  codes: string[],
+  spotMarket: string,
+  breakevenHours: number | null,
+  isWrapper: boolean,
+): { zh: string; en: string } {
+  const rate = `${hourlyPct.toFixed(5)}%/h（年化约 ${grossApr.toFixed(1)}%）`;
+  const combo = `买入 ${spotMarket} 现货 + 做空等值 ${asset} 永续，价格涨跌对冲，专收资金费`;
+  if (codes.includes('REJECTED_MAPPING'))
+    return {
+      zh: `${asset} 在 Hyperliquid 没有现货市场，无法构建「现货多+永续空」的对冲腿，暂不具备站内套利条件。`,
+      en: `${asset} has no spot market on Hyperliquid, so the hedged spot+perp combo cannot be built.`,
+    };
+  if (codes.includes('REJECTED_UNSUPPORTED'))
+    return {
+      zh: `${asset} 当前资金费率为负（${rate}），意味着做空方要付费。反向组合（现货空+永续多）涉及借币成本，本期不支持，暂无机会。`,
+      en: `${asset} funding is negative (${rate}); the reverse combo needs borrowing, not supported yet. No opportunity now.`,
+    };
+  if (codes.includes('REJECTED_LIQUIDITY'))
+    return {
+      zh: `${asset} 费率 ${rate}，但市场深度不足（未平仓额过小），实际建仓滑点会吞掉收益，判定暂无机会。`,
+      en: `${asset} rate is ${rate} but open interest is too small; slippage would eat the carry. Rejected.`,
+    };
+  if (codes.includes('REJECTED_COST'))
+    return {
+      zh: `${asset} 当前费率 ${rate}，组合为「${combo}」，但费率收入无法覆盖双腿往返成本（覆盖比 ${coverage.toFixed(2)}，门槛 2.0）——这就是"毛APR幻觉"：看着有收益，扣完成本是亏的。等费率异常升高时再出手。`,
+      en: `${asset} funding ${rate}: income cannot cover round-trip costs (coverage ${coverage.toFixed(2)} < 2.0). Gross APR is an illusion here; wait for a funding spike.`,
+    };
+  return {
+    zh: `✅ ${asset} 当前费率 ${rate}，处于偏高水平，存在套利机会。组合：${combo}${isWrapper ? '（现货为包装资产，留意脱锚风险）' : ''}。扣除全部成本后建模净年化约 ${netApr.toFixed(1)}%，成本覆盖比 ${coverage.toFixed(2)}${breakevenHours ? `，费率若维持约 ${breakevenHours.toFixed(0)} 小时回本` : ''}。费率每小时结算一次，翻负即退出。`,
+    en: `✅ ${asset} funding ${rate} is elevated — opportunity. Combo: long spot + short equal perp${isWrapper ? ' (wrapped spot asset)' : ''}. Modeled net APR ≈ ${netApr.toFixed(1)}%, coverage ${coverage.toFixed(2)}${breakevenHours ? `, breakeven ≈ ${breakevenHours.toFixed(0)}h if rate holds` : ''}.`,
+  };
 }
 
 const HOURS_PER_YEAR = 24 * 365;
@@ -110,6 +183,12 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
     const costs = buildCosts('hyperliquid', 'hyperliquid', grossFundingPct);
     const totalCostPct = costs.reduce((a, c) => a + c.pct, 0);
     const netHorizonPct = grossFundingPct - totalCostPct;
+    const hourlyPct = pct(perp.hourlyFunding);
+    const grossAprPct = pct(perp.hourlyFunding * HOURS_PER_YEAR);
+    const netAprPct = (netHorizonPct / 100 / CONFIG.horizonHours) * HOURS_PER_YEAR * 100;
+    const coverage = totalCostPct > 0 ? grossFundingPct / totalCostPct : 0;
+    const breakevenHours = perp.hourlyFunding > 0 ? totalCostPct / hourlyPct : null;
+    const spotName = spot ? spot.pair : `${wrapperToken ?? asset}/USDC`;
 
     out.push(
       decide(
@@ -122,21 +201,26 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
             { venue: 'hyperliquid', market: `${asset}-PERP`, instrument: 'perp', side: 'short', price: perp.markPx, hourlyFundingPct: pct(perp.hourlyFunding) },
           ],
           horizonHours: CONFIG.horizonHours,
-          grossApr: pct(perp.hourlyFunding * HOURS_PER_YEAR),
+          grossApr: grossAprPct,
           grossFundingPct,
           costs,
           totalCostPct,
           netHorizonPct,
-          netApr: (netHorizonPct / 100 / CONFIG.horizonHours) * HOURS_PER_YEAR * 100,
-          costCoverage: totalCostPct > 0 ? grossFundingPct / totalCostPct : 0,
+          netApr: netAprPct,
+          costCoverage: coverage,
           flags,
           observedAt,
+          payouts: buildPayouts(hourlyPct, totalCostPct),
+          breakevenHours,
+          narrative: { zh: '', en: '' },
         },
         extraCodes,
       ),
     );
+    const c = out[out.length - 1]!;
+    c.narrative = buildNarrative(asset, hourlyPct, grossAprPct, netAprPct, coverage, c.rejectionCodes, spotName, breakevenHours, flags.includes('wrapper_risk'));
   }
-  return out;
+  return out.sort((a, b) => (a.decision === b.decision ? b.netApr - a.netApr : a.decision === 'ACCEPTED' ? -1 : 1));
 }
 
 interface VenueRate {
@@ -212,6 +296,9 @@ export function buildS2Candidates(
             costCoverage: totalCostPct > 0 ? grossFundingPct / totalCostPct : 0,
             flags,
             observedAt,
+            payouts: buildPayouts(pct(Math.max(0, spreadHourly)), totalCostPct),
+            breakevenHours: spreadHourly > 0 ? totalCostPct / pct(spreadHourly) : null,
+            narrative: { zh: '跨所策略（本期未启用）', en: 'Cross-venue (disabled this phase)' },
           },
           extraCodes,
         ),

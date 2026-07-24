@@ -20,6 +20,11 @@ export interface AgentRecord {
   log: AgentLogEntry[];
   /** 收益曲线快照（引擎每 tick 追加，稀释保留） */
   equitySeries: { at: string; pnlUsd: number }[];
+  /** 回合制：每 tick 消耗一回合，用尽自动停止（上限 120） */
+  maxRounds: number;
+  rounds: number;
+  /** 用户自定义的 LLM 评估补充指令 */
+  customPrompt: string;
 }
 
 export interface PositionRecord {
@@ -45,6 +50,8 @@ export interface PositionRecord {
   receiptHash?: string;
   /** LIVE 仓的真实成交回执 */
   fills?: unknown[];
+  /** 每 tick 快照：实际 PnL vs 入场时点的预测 PnL（前端画预测/实际对比图） */
+  series?: { at: string; pnlUsd: number; predictedPnlUsd: number }[];
 }
 
 export interface UserWalletRecord {

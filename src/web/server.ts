@@ -34,6 +34,7 @@ interface ScanState {
 }
 let scan: ScanState | null = null;
 let scanning: Promise<ScanState> | null = null;
+const fundingHistCache = new Map<string, { at: number; data: unknown }>();
 
 async function refreshScan(): Promise<ScanState> {
   const observedAt = new Date().toISOString();
@@ -101,6 +102,22 @@ const server = createServer(async (req, res) => {
       });
     }
 
+    if (path === '/api/funding-history') {
+      const coin = (url.searchParams.get('coin') ?? '').toUpperCase();
+      if (!/^[A-Z0-9]{1,15}$/.test(coin)) return json(res, 400, { error: 'bad coin' });
+      const hit = fundingHistCache.get(coin);
+      if (hit && Date.now() - hit.at < 30 * 60e3) return json(res, 200, hit.data);
+      const { postJson } = await import('../lib/http.js');
+      const raw = await postJson<{ time: number; fundingRate: string }[]>(`${config.hl.api}/info`, {
+        type: 'fundingHistory',
+        coin,
+        startTime: Date.now() - 7 * 24 * 3600e3,
+      });
+      const data = { coin, points: raw.map((r) => ({ time: r.time, hourlyPct: Number(r.fundingRate) * 100 })) };
+      fundingHistCache.set(coin, { at: Date.now(), data });
+      return json(res, 200, data);
+    }
+
     if (path === '/api/auth/nonce') {
       const address = url.searchParams.get('address') ?? '';
       if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return json(res, 400, { error: 'bad address' });
@@ -154,6 +171,7 @@ const server = createServer(async (req, res) => {
       if (mode === 'LIVE' && !store.wallets.find((w) => w.owner === owner)?.approvedAt)
         return json(res, 400, { error: '实盘模式需先完成 API Wallet 授权（收益中心→实盘设置）' });
       const style = ['conservative', 'balanced', 'aggressive'].includes(String(b.style)) ? (b.style as keyof typeof STYLE_PARAMS) : 'balanced';
+      const maxRounds = Math.min(Math.max(Math.round(Number(b.maxRounds) || 120), 10), 120);
       const agent = {
         id: crypto.randomUUID().slice(0, 8),
         owner,
@@ -164,8 +182,11 @@ const server = createServer(async (req, res) => {
         mode: mode as 'PAPER' | 'LIVE',
         status: 'RUNNING' as const,
         createdAt: new Date().toISOString(),
-        log: [{ at: new Date().toISOString(), msg: `Agent 创建（${mode === 'LIVE' ? '实盘' : '模拟'} · ${STYLE_PARAMS[style].label} · $${capitalUsd}）` }],
+        log: [{ at: new Date().toISOString(), msg: `Agent 创建（${mode === 'LIVE' ? '实盘' : '模拟'} · ${STYLE_PARAMS[style].label} · $${capitalUsd} · ${maxRounds} 回合${b.customPrompt ? ' · 自定义指令已设置' : ''}）` }],
         equitySeries: [],
+        maxRounds,
+        rounds: 0,
+        customPrompt: String(b.customPrompt ?? '').slice(0, 500),
       };
       store.agents.push(agent);
       saveStore();

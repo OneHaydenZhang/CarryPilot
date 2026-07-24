@@ -25,14 +25,14 @@ let hourBudgetUsed = 0;
 let hourBucket = 0;
 const HOUR_BUDGET = 30;
 
-export async function evaluateCandidate(c: Candidate): Promise<LlmVerdict | null> {
+export async function evaluateCandidate(c: Candidate, customPrompt = ''): Promise<LlmVerdict | null> {
   if (!KEY) return null;
   const bucket = Math.floor(Date.now() / 3600e3);
   if (bucket !== hourBucket) {
     hourBucket = bucket;
     hourBudgetUsed = 0;
   }
-  const cacheKey = `${c.asset}-${bucket}`;
+  const cacheKey = `${c.asset}-${bucket}-${customPrompt.length}`;
   const hit = cache.get(cacheKey);
   if (hit) return hit;
   if (hourBudgetUsed >= HOUR_BUDGET) return null; // 预算耗尽 → 降级规则模式
@@ -44,7 +44,7 @@ export async function evaluateCandidate(c: Candidate): Promise<LlmVerdict | null
 - 毛APR: ${c.grossApr.toFixed(2)}%，扣全部成本后建模净APR: ${c.netApr.toFixed(2)}%（持有${c.horizonHours}h口径）
 - 成本覆盖比: ${c.costCoverage.toFixed(2)}，标记: ${c.flags.join(',') || '无'}
 评估要点：费率的可持续性（极端高费率往往几小时内衰减）、小币种费率噪声、wrapper 资产风险。
-只输出 JSON: {"approve": boolean, "confidence": 0到1, "reasoning": "中文，≤120字"}`;
+${customPrompt ? `用户补充要求（在不违反风控的前提下遵守）：${customPrompt.slice(0, 500)}\n` : ''}只输出 JSON: {"approve": boolean, "confidence": 0到1, "reasoning": "中文，≤120字"}`;
 
   try {
     hourBudgetUsed++;
