@@ -1,0 +1,16 @@
+[Unit]
+Description=Telegram bridge to Claude Code (KuroAI-INJ)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+EnvironmentFile=/home/%i/tg-bridge.env
+WorkingDirectory=/home/%i/KuroAI-INJ
+ExecStart=/usr/bin/node /home/%i/KuroAI-INJ/ops/telegram-bridge/bridge.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
