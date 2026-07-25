@@ -421,7 +421,7 @@ const I18N={
  riskTitle:['风险中心','Risk Center'],riskSub:['持仓风险分级 + 未来 48h 三情景 PnL 预测。Agent 依据同一套规则自动清仓或调仓。','Risk levels + 48h scenario projection; agents act on the same rules.'],
  liveObs:['实盘账户观测','Live Account'],liveObsHint:['连接钱包并完成实盘授权后展示。','Shown after live approval.'],
  tabSet:['设置','Settings'],setTitle:['设置','Settings'],setSub:['账户连接、交易授权与燃料充值。','Account, authorization & fuel.'],setWallet:['钱包','Wallet'],
- cancel:['取消','Cancel'],wsVirtual:['虚拟盘','Virtual'],wsLive:['实盘','Live'],setVirtual:['虚拟盘账户','Virtual Account'],setVirtualDesc:['虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。','Virtual account for risk-free testing. Set a virtual balance; virtual agents draw from it.'],
+ cancel:['取消','Cancel'],
  tLongsPay:['多付费','longs pay'],tShortsPay:['空付费','shorts pay'],tElevated:['费率偏高','elevated'],tVolatile:['波动大','volatile'],tWrap:['包装现货','wrapped'],tNoSpot:['仅观察','no spot'],
  agDetail:['Agent 详情','Agent detail'],agConfig:['配置','Config'],agPositions:['交易记录（历史平仓）','Trade history'],agMemory:['沉淀的复盘记忆','Review memory'],viewDetail:['详情/记录','Detail'],
  tabChat:['对话','Chat'],chatTitle:['CarryPilot 助手','CarryPilot Assistant'],chatSub:['问费率、问机会，确认后可直接下单','Ask rates/opportunities — confirm to trade'],chatDisc:['⚠ 研究结论，非投资建议。下单由你确认，风控不可越权。','⚠ Research only, not investment advice. Orders need your confirmation.'],
@@ -728,36 +728,10 @@ function renderWsNote(){
     ?(LANG==='zh'?'零风险模拟 · 每 10 分钟决策一次 · 回合上限 120':'Risk-free · 10min/round · max 120 rounds')
     :(LANG==='zh'?'真实下单 · 需在设置授权 API Wallet · 上限 $'+ME.limits.maxLiveCapitalUsd:'Real orders · authorize in Settings · cap $'+ME.limits.maxLiveCapitalUsd);
 }
-function renderFuel(){
-  const p=ME.points;const running=wsAgents().filter(a=>a.status==='RUNNING').length;
-  const burn=running*p.perTick;const rounds=burn>0?Math.floor(p.balance/burn):null;
-  $('fuel-banner').style.display='block';
-  $('fuel-banner').innerHTML=`<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <span style="font-size:22px">⚡</span>
-    <div><b>${LANG==='zh'?'Agent 燃料 · INJ 积分':'Agent fuel · INJ credits'}</b><div class="dim" style="font-size:12px">${LANG==='zh'?`每个运行中的 Agent 每回合（10min）消耗 ${p.perTick} 积分`:`each running agent burns ${p.perTick}/round (10min)`}</div></div>
-    <span style="flex:1"></span>
-    <div style="text-align:right"><span style="font-size:24px;font-weight:800" class="${p.balance>20?'pos':'neg'}">${p.balance.toFixed(1)}</span>
-    <div class="dim" style="font-size:11px">${running?(LANG==='zh'?`${running} 个运行中 · 约可再跑 ${rounds} 回合`:`${running} running · ~${rounds} rounds`):(LANG==='zh'?'无运行中 Agent':'idle')}</div></div>
-    <button class="btn ghost mini" onclick="document.querySelector('[data-v=settings]').click()">${LANG==='zh'?'去充值':'Top up'} →</button>
-  </div>`;
-}
 function renderSettings(){
   $('set-wallet').innerHTML=addr
     ?`${LANG==='zh'?'已连接':'Connected'}: <code>${addr.slice(0,6)}…${addr.slice(-4)}</code>`
     :(LANG==='zh'?'未连接钱包':'Not connected');
-}
-function renderVirtual(){
-  $('virtual-setup').innerHTML=`${LANG==='zh'?'当前虚拟资金':'Virtual balance'}: <b style="font-size:16px">$${ME.virtualBalance.toLocaleString()}</b>
-    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="vb-input" type="number" value="${ME.virtualBalance}" style="width:150px" min="100" max="1000000">
-      <button class="btn ghost mini" onclick="saveVirtual()">${LANG==='zh'?'保存':'Save'}</button>
-      <span class="dim" style="font-size:12px">${LANG==='zh'?'虚拟盘 Agent 资金上限受此约束':'caps virtual agent capital'}</span>
-    </div>`;
-}
-async function saveVirtual(){
-  const v=Number($('vb-input').value);
-  await authFetch('/api/prefs',{method:'POST',body:JSON.stringify({virtualBalanceUsd:v})});
-  loadMe();
 }
 function renderAgentStats(){
   const A=wsAgents(),P=wsPos();const S=wsSum();
