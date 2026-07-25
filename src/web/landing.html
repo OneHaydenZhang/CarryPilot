@@ -9,26 +9,49 @@
   *{box-sizing:border-box;margin:0}
   html{scroll-behavior:smooth}
   body{background:var(--bg);color:var(--text);font:15px/1.7 "Inter",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:
-    radial-gradient(700px 400px at 20% -10%, rgba(46,230,168,.09), transparent),
-    radial-gradient(700px 400px at 80% -10%, rgba(77,159,255,.09), transparent),
-    radial-gradient(500px 300px at 50% 110%, rgba(167,139,250,.06), transparent)}
-  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35;
+  /* 流动极光背景 */
+  body::before{content:"";position:fixed;inset:-20%;pointer-events:none;z-index:0;background:
+    radial-gradient(600px 460px at 18% 12%, rgba(46,230,168,.14), transparent 60%),
+    radial-gradient(680px 500px at 82% 8%, rgba(77,159,255,.13), transparent 60%),
+    radial-gradient(560px 420px at 60% 88%, rgba(167,139,250,.10), transparent 60%),
+    radial-gradient(520px 400px at 30% 70%, rgba(255,180,84,.06), transparent 60%);
+    filter:blur(8px);animation:aurora 22s ease-in-out infinite}
+  @keyframes aurora{0%,100%{transform:translate3d(0,0,0) scale(1)}33%{transform:translate3d(3%,-2%,0) scale(1.08)}66%{transform:translate3d(-3%,2%,0) scale(1.04)}}
+  /* 网格 + 缓慢平移 */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.3;
     background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
-    background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 0%,black 10%,transparent 65%)}
-  .wrap{max-width:1060px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+    background-size:60px 60px;mask-image:radial-gradient(ellipse at 50% 0%,black 8%,transparent 60%);animation:grid 40s linear infinite}
+  @keyframes grid{from{background-position:0 0}to{background-position:60px 60px}}
+  /* 漂浮光点 */
+  .orb{position:fixed;border-radius:50%;filter:blur(50px);opacity:.5;z-index:0;pointer-events:none}
+  .orb.o1{width:340px;height:340px;background:radial-gradient(circle,rgba(46,230,168,.5),transparent 70%);top:6%;left:-6%;animation:float1 18s ease-in-out infinite}
+  .orb.o2{width:300px;height:300px;background:radial-gradient(circle,rgba(77,159,255,.45),transparent 70%);top:34%;right:-8%;animation:float2 24s ease-in-out infinite}
+  .orb.o3{width:260px;height:260px;background:radial-gradient(circle,rgba(167,139,250,.4),transparent 70%);bottom:8%;left:20%;animation:float1 28s ease-in-out infinite reverse}
+  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-50px)}}
+  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,40px)}}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+  /* 滚动揭示 */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.orb,body::before,body::after{animation:none}}
   nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;flex-wrap:wrap;gap:10px}
   .logo{font-size:19px;font-weight:800}.logo span{color:var(--green)}
   .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:13px 30px;border-radius:12px;text-decoration:none;border:none;font-size:15px;cursor:pointer;transition:.2s}
   .btn:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(46,230,168,.25)}
   .btn.ghost{background:none;border:1px solid var(--border);color:var(--text);font-weight:500}
-  .hero{text-align:center;padding:66px 0 30px}
-  .hero .pre{color:var(--green);font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px}
-  .hero h1{font-size:48px;line-height:1.2;margin-bottom:18px;font-weight:800;letter-spacing:-1px}
-  .hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--green),#1bc4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero p{color:var(--dim);max-width:620px;margin:0 auto 28px;font-size:17px}
+  .hero{text-align:center;padding:76px 0 34px}
+  .hero .pre{color:var(--green);font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:16px;display:inline-block;padding:5px 16px;border:1px solid rgba(46,230,168,.3);border-radius:20px;background:rgba(46,230,168,.05);animation:pulse 3s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(46,230,168,.2)}50%{box-shadow:0 0 0 8px rgba(46,230,168,0)}}
+  .hero h1{font-size:58px;line-height:1.15;margin:18px auto;font-weight:800;letter-spacing:-1.5px;max-width:800px}
+  .hero h1 em{font-style:normal;background:linear-gradient(100deg,var(--green),#1bc4ff,var(--purple),var(--green));background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 6s linear infinite}
+  @keyframes shimmer{to{background-position:300% 0}}
+  .hero p{color:var(--dim);max-width:660px;margin:0 auto 28px;font-size:17px}
   .badges{display:flex;gap:10px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
-  .badge{border:1px solid var(--border);background:rgba(255,255,255,.02);border-radius:20px;padding:5px 15px;font-size:13px;color:var(--dim)}
+  .badge{border:1px solid var(--border);background:rgba(255,255,255,.02);border-radius:20px;padding:5px 15px;font-size:13px;color:var(--dim);transition:.2s}
+  .badge:hover{border-color:var(--green);color:var(--text);transform:translateY(-1px)}
+  .btn.big{position:relative;overflow:hidden}
+  .btn.big::after{content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);animation:sheen 3.2s ease-in-out infinite}
+  @keyframes sheen{0%{left:-120%}55%,100%{left:130%}}
   .logos{display:flex;gap:24px;justify-content:center;align-items:center;margin:36px 0 4px;flex-wrap:wrap;color:var(--dim);font-size:14px;font-weight:600;opacity:.9}
   .logos span{display:flex;align-items:center;gap:8px}.logos .mark{font-size:19px}
   h2.sec{text-align:center;font-size:30px;margin:72px 0 10px;font-weight:800;letter-spacing:-.5px}
@@ -63,10 +86,16 @@
   table.ex th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;background:var(--panel2)}
   svg text{font-family:inherit}
   footer{border-top:1px solid var(--border);margin-top:80px;padding:28px 0;color:var(--dim);font-size:12px;text-align:center}
-  @media(max-width:720px){.hero h1{font-size:31px}.example{grid-template-columns:1fr}h2.sec{font-size:24px}}
+  .card:hover .cn{transform:scale(1.15) rotate(-4deg)}
+  .cn{display:inline-block;transition:.25s}
+  .livepill{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);border:1px solid var(--border);border-radius:20px;padding:5px 13px;margin-bottom:14px}
+  .livepill i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.6s ease-in-out infinite}
+  @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(46,230,168,.6)}50%{opacity:.5;box-shadow:0 0 0 5px rgba(46,230,168,0)}}
+  @media(max-width:720px){.hero h1{font-size:32px}.example{grid-template-columns:1fr}h2.sec{font-size:24px}.wrap{padding:0 18px}}
 </style>
 </head>
 <body>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
 <div class="wrap">
   <nav>
     <div class="logo">🛩️ Carry<span>Pilot</span></div>
@@ -74,11 +103,11 @@
   </nav>
 
   <div class="hero">
-    <div class="pre">AI Funding-Rate Arbitrage Agent · Hyperliquid × Injective</div>
+    <div class="livepill"><i></i> <span id="live-scan">正在扫描 Hyperliquid 全市场资金费率…</span></div>
     <h1>不预测涨跌，<br>让 Agent 帮你<em>收资金费率</em></h1>
     <p>一句话：<b style="color:var(--text)">买现货 + 做空等额永续，价格涨跌互相抵消，每小时白收市场付给空头的「资金费」。</b>AI Agent 负责找机会、算成本、开单、盯盘、撤退。</p>
     <div class="badges"><span class="badge">Δ 市场中性 · 不赌方向</span><span class="badge">扣完成本才叫收益</span><span class="badge">AI 评估 + 硬风控</span><span class="badge">授权钱包只能交易不能提币</span></div>
-    <a class="btn" href="/app" style="font-size:17px;padding:15px 44px">开始使用 →</a>
+    <a class="btn big" href="/app" style="font-size:17px;padding:15px 44px">开始使用 →</a>
     <div class="logos">
       <span><span class="mark">🌊</span>Hyperliquid</span>
       <span><span class="mark">🥷</span>Injective</span>
@@ -87,17 +116,17 @@
     </div>
   </div>
 
-  <h2 class="sec">套利为什么会存在？</h2>
+  <h2 class="sec reveal">套利为什么会存在？</h2>
   <p class="sub">资金费率不是漏洞，是永续合约的核心机制 —— 而机制性的钱，会持续地流向愿意站在少数派一边的人</p>
-  <div class="why">
+  <div class="why reveal">
     <div class="w"><div class="ic">⚓</div><b>永续合约需要锚</b><p>永续合约没有交割日，价格全靠「资金费率」拉住：合约价高于现货价时，做多的人每小时给做空的人付费，逼着价格回锚。这笔费用写在交易所规则里，每小时结算一次。</p></div>
     <div class="w"><div class="ic">🐂</div><b>市场天然多头拥挤</b><p>牛市里人人都想加杠杆做多，多头长期多于空头 → 费率长期为正 → 做空的人持续收钱。愿意站到空头那边"供给平衡"的人，赚的就是这份拥挤费。</p></div>
     <div class="w"><div class="ic">🛡️</div><b>对冲让它接近无风险</b><p>单纯做空会亏在涨价上。但「现货多 + 永续空」让涨跌两边抵消，只剩下每小时的费率收入。剩余的真实成本是手续费、滑点和费率翻转 —— 这正是本平台用引擎精确计算的部分。</p></div>
   </div>
 
-  <h2 class="sec">一个具体的例子</h2>
+  <h2 class="sec reveal">一个具体的例子</h2>
   <p class="sub">假设 BTC 永续小时费率 0.005%（高费率窗口，历史上牛市常见），你投入 $10,000</p>
-  <div class="example">
+  <div class="example reveal">
     <div class="ex-l">
       <div class="h">📐 假设条件（示意，非承诺收益）</div>
       <div class="row"><span class="dimt">投入本金</span><span>$10,000</span></div>
@@ -122,8 +151,8 @@
     </div>
   </div>
 
-  <h2 class="sec">套利逻辑，一张图</h2>
-  <div class="panel" style="overflow-x:auto">
+  <h2 class="sec reveal">套利逻辑，一张图</h2>
+  <div class="panel reveal" style="overflow-x:auto">
     <svg viewBox="0 0 900 300" width="100%" style="min-width:640px">
       <defs><marker id="arg" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#2ee6a8" stroke-width="1.5"/></marker></defs>
       <rect x="30" y="60" width="220" height="90" rx="14" fill="#10161f" stroke="#2ee6a8"/>
@@ -147,9 +176,9 @@
     </svg>
   </div>
 
-  <h2 class="sec">平台在做什么 · 用户动线</h2>
+  <h2 class="sec reveal">平台在做什么 · 用户动线</h2>
   <p class="sub">你只做两件事：连钱包、创建 Agent。剩下的是它的工作</p>
-  <div class="flow">
+  <div class="flow reveal">
     <div class="step"><div class="num">STEP 1 🔗</div><h3>连接钱包</h3><p>MetaMask / OKX / Rabby 弹窗选择，签名即登录。手机端支持跳转钱包 App 打开。无交易、无 gas、不碰资金。</p></div>
     <div class="step"><div class="num">STEP 2 📡</div><h3>看清市场</h3><p>费率现状：全市场实时费率+7天曲线+标签（多付费/空付费/有机会）。套利机会：扣完成本的真实净APR，附 1000-20000u 的收益规模表。</p></div>
     <div class="step"><div class="num">STEP 3 🤖</div><h3>创建 Agent</h3><p>选标的、风格、资金、回合数（≤120），用结构化模板给 AI 定偏好。INJ 积分是燃料，每回合消耗。</p></div>
@@ -157,8 +186,8 @@
     <div class="step"><div class="num">STEP 5 📈</div><h3>观测与复盘</h3><p>预测 vs 实际曲线、48h 三情景风险预测、平仓自动复盘沉淀为记忆，喂给下一次决策 —— 越跑越懂这个市场。</p></div>
   </div>
 
-  <h2 class="sec">五大中心 + 设置</h2>
-  <div class="grid">
+  <h2 class="sec reveal">五大中心 + 设置</h2>
+  <div class="grid reveal">
     <div class="card"><h3>📡 费率现状中心</h3><p>实时费率、标签一眼懂（多付费/空付费/费率偏高/波动大）、7 天坐标曲线、一键跳 HL。</p></div>
     <div class="card"><h3>🔬 套利机会中心</h3><p>机会卡片置顶高亮，过滤标签，点开看对冲结构、成本瀑布图、大白话收益表、术语问号即点即懂。</p></div>
     <div class="card"><h3>🤖 Agent 中心</h3><p>燃料余量置顶，全局统计（胜率/回合/PnL），每个 Agent 的决策日志、预测对比图、复盘记忆。</p></div>
@@ -172,5 +201,16 @@
     🛩️ CarryPilot · Hyperliquid 站内资金费率套利 · Injective 积分与链上证据 · AdventureX 2026
   </footer>
 </div>
+<script>
+  // 滚动揭示
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  // hero 实时扫描数：拉一次真实机会数，动态呈现平台在干活
+  fetch('/api/scan').then(r=>r.json()).then(d=>{
+    const total=(d.rates||[]).length, acc=(d.candidates||[]).filter(c=>c.decision==='ACCEPTED').length;
+    const el=document.getElementById('live-scan');
+    if(el) el.textContent=`已扫描 ${total} 个市场 · 实时计算成本后机会` + (acc?` · ${acc} 个待研究`:' · 当前等待高费率窗口');
+  }).catch(()=>{});
+</script>
 </body>
 </html>

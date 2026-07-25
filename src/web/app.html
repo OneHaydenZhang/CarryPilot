@@ -131,6 +131,11 @@
   <button class="btn" id="connectBtn" onclick="openWalletModal()" data-i18n="connect">连接钱包</button>
 </div>
 
+<!-- Agent 详情抽屉 -->
+<div class="modal-bg" id="agdrawer" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="modal" style="width:min(680px,96vw);max-height:92vh;overflow-y:auto" id="agdrawer-body"></div>
+</div>
+
 <!-- 钱包选择弹窗 -->
 <div class="modal-bg" id="wmodal" onclick="if(event.target===this)this.classList.remove('on')">
   <div class="modal">
@@ -149,6 +154,16 @@
       <span style="flex:1"></span>
       <button class="btn ghost mini" onclick="loadScan(true)" data-i18n="refresh">↻ 手动刷新</button>
       <span class="dim" style="font-size:11px" data-i18n="autoNote">自动刷新：每 10 分钟</span>
+    </div>
+    <div class="chips" id="rate-tag-filter">
+      <span class="chip on" data-rf="all" data-i18n="fAll">全部</span>
+      <span class="chip" data-rf="opportunity">✔ <span data-i18n="fOk">有机会</span></span>
+      <span class="chip" data-rf="longs-pay" data-i18n="tLongsPay">多付费</span>
+      <span class="chip" data-rf="shorts-pay" data-i18n="tShortsPay">空付费</span>
+      <span class="chip" data-rf="rate-elevated" data-i18n="tElevated">费率偏高</span>
+      <span class="chip" data-rf="volatile" data-i18n="tVolatile">波动大</span>
+      <span class="chip" data-rf="wrapped-spot" data-i18n="tWrap">包装现货</span>
+      <span class="chip" data-rf="no-spot" data-i18n="tNoSpot">仅观察</span>
     </div>
     <table><thead><tr><th data-i18n="thCoin">币种</th><th><span data-i18n="thHourly">小时费率</span><span class="tip" data-t="资金费率：永续合约每小时在多空之间结算的费用。正=做多的人付钱给做空的人；负=反过来。例：0.00125%/h 时持有 $10000 空单每小时收 $0.125">?</span></th><th><span data-i18n="thApr">年化(毛)</span><span class="tip" data-t="毛APR：把当前小时费率×24×365 直接年化，未扣任何成本，仅用于快速比较，不是可实现收益">?</span></th><th data-i18n="thTags">标签</th><th data-i18n="thMark">标记价</th><th>OI<span class="tip" data-t="未平仓合约总额（Open Interest）：市场上所有未平仓永续仓位的名义总值，越大流动性越好">?</span></th><th></th></tr></thead><tbody id="rates-body"></tbody></table>
   </div>
@@ -266,7 +281,7 @@
 const $=id=>document.getElementById(id);
 const fmt=(x,d=2)=>(x>=0?'+':'')+Number(x).toFixed(d)+'%';
 const usd=x=>(x<0?'-$':'$')+Math.abs(x).toFixed(2);
-let SCAN=null, ME=null, FILTER='all', SELECTED=null, WORKSPACE='PAPER';
+let SCAN=null, ME=null, FILTER='all', RATE_FILTER='all', SELECTED=null, WORKSPACE='PAPER';
 let token=localStorage.getItem('cp_token'), addr=localStorage.getItem('cp_addr');
 let LANG=localStorage.getItem('cp_lang')||'zh';
 
@@ -291,6 +306,8 @@ const I18N={
  liveObs:['实盘账户观测','Live Account'],liveObsHint:['连接钱包并完成实盘授权后展示。','Shown after live approval.'],
  tabSet:['设置','Settings'],setTitle:['设置','Settings'],setSub:['账户连接、虚拟盘资金、交易授权与燃料充值。','Account, virtual balance, authorization & fuel.'],setWallet:['钱包','Wallet'],
  wsVirtual:['虚拟盘','Virtual'],wsLive:['实盘','Live'],setVirtual:['虚拟盘账户','Virtual Account'],setVirtualDesc:['虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。','Virtual account for risk-free testing. Set a virtual balance; virtual agents draw from it.'],
+ tLongsPay:['多付费','longs pay'],tShortsPay:['空付费','shorts pay'],tElevated:['费率偏高','elevated'],tVolatile:['波动大','volatile'],tWrap:['包装现货','wrapped'],tNoSpot:['仅观察','no spot'],
+ agDetail:['Agent 详情','Agent detail'],agConfig:['配置','Config'],agPositions:['全部仓位','All positions'],agMemory:['复盘记忆','Review memory'],viewDetail:['查看详情','Detail'],
 };
 const TAGL={ 'opportunity':['✔ 有机会','✔ opportunity','t-ok'],'longs-pay':['多付费','longs pay','t-pur'],'shorts-pay':['空付费','shorts pay','t-warn'],
  'rate-elevated':['费率偏高','elevated','t-warn'],'wrapped-spot':['包装现货','wrapped spot','t-warn'],'no-spot':['无现货·仅观察','no spot','t-no'],'low-liquidity':['流动性不足','low liquidity','t-no'],'volatile':['费率波动大','volatile','t-warn']};
@@ -324,6 +341,10 @@ document.querySelectorAll('.chip[data-f]').forEach(c=>c.onclick=()=>{
 document.querySelectorAll('.chip[data-ws]').forEach(c=>c.onclick=()=>{
   document.querySelectorAll('.chip[data-ws]').forEach(x=>x.classList.remove('on'));
   c.classList.add('on');WORKSPACE=c.dataset.ws;$('c-mode').value=WORKSPACE;if(ME)renderAll();
+});
+document.querySelectorAll('.chip[data-rf]').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('.chip[data-rf]').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');RATE_FILTER=c.dataset.rf;renderScan();
 });
 
 /* ---------- wallet modal (EIP-6963) ---------- */
@@ -444,16 +465,17 @@ function renderScan(){
   if(!SCAN)return;
   $('rates-meta').textContent=`${LANG==='zh'?'数据时点':'As of'} ${new Date(SCAN.generatedAt).toLocaleTimeString()} · AI: ${SCAN.llm.enabled?(SCAN.llm.name||'AI'):(LANG==='zh'?'规则模式':'rules only')}`;
   const candByCoin=Object.fromEntries(SCAN.candidates.map(c=>[c.asset,c]));
-  $('rates-body').innerHTML=SCAN.rates.map((r,i)=>{
-    const c=candByCoin[r.coin];
-    const tags=(c?c.tags:[(r.hourlyFundingPct>0?'longs-pay':r.hourlyFundingPct<0?'shorts-pay':''),(!r.hasSpot?'no-spot':'')]).filter(Boolean);
-    return `<tr class="row" onclick="toggleRateDetail(${i})">
+  const rateTags=r=>{const c=candByCoin[r.coin];return (c?c.tags:[(r.hourlyFundingPct>0?'longs-pay':r.hourlyFundingPct<0?'shorts-pay':''),(!r.hasSpot?'no-spot':''),(Math.abs(r.hourlyFundingPct)>0.005?'rate-elevated':'')]).filter(Boolean)};
+  const rows=SCAN.rates.map((r,i)=>({r,i,tags:rateTags(r)})).filter(o=>RATE_FILTER==='all'||o.tags.includes(RATE_FILTER));
+  $('rate-count')&&($('rate-count').textContent='');
+  $('rates-body').innerHTML=rows.map(({r,i,tags})=>`<tr class="row" onclick="toggleRateDetail(${i})">
     <td><b>${r.coin}</b></td>
     <td class="${r.hourlyFundingPct>=0?'pos':'neg'}">${fmt(r.hourlyFundingPct,5)}</td>
     <td class="${r.annualizedPct>=0?'pos':'neg'}">${fmt(r.annualizedPct,1)}</td>
     <td id="rtags-${i}">${tags.map(tagHtml).join(' ')}</td>
     <td>$${r.markPx.toLocaleString()}</td><td>$${(r.oiUsd/1e6).toFixed(1)}M</td>
-    <td>${hlLink(r.coin)}</td></tr><tr class="detail" id="rd-${i}" style="display:none"><td colspan="7"></td></tr>`}).join('');
+    <td>${hlLink(r.coin)}</td></tr><tr class="detail" id="rd-${i}" style="display:none"><td colspan="7"></td></tr>`).join('')
+    ||`<tr><td colspan="7" class="dim">${LANG==='zh'?'该标签下无标的':'No matches'}</td></tr>`;
   renderCombos();
   const s1=SCAN.candidates.filter(c=>c.strategy==='S1_SPOT_PERP')
     .filter(c=>FILTER==='all'||(FILTER==='ok'&&c.decision==='ACCEPTED')||(FILTER==='no'&&c.decision==='REJECTED')||(FILTER==='wrap'&&c.flags.includes('wrapper_risk')));
@@ -625,7 +647,7 @@ function renderAgents(){
     const roundsPct=Math.min(100,((a.rounds||0)/(a.maxRounds||120))*100);
     const styleTag={conservative:['🛡 '+(LANG==='zh'?'保守':'Consv'),'t-paper'],balanced:['⚖️ '+(LANG==='zh'?'均衡':'Bal'),'t-pur'],aggressive:['🔥 '+(LANG==='zh'?'激进':'Aggr'),'t-warn']}[a.style];
     return `<div class="agent ${a.status==='RUNNING'?'running':''}">
-      <div class="hd"><b>🤖 ${a.name}</b>
+      <div class="hd"><b style="cursor:pointer" onclick="openAgentDetail('${a.id}')">🤖 ${a.name} <span class="dim" style="font-size:11px">›</span></b>
         <span class="tag ${a.mode==='LIVE'?'t-live':'t-paper'}">${a.mode==='LIVE'?'⚡ '+(LANG==='zh'?'实盘':'LIVE'):'🧪 '+(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
         <span class="tag ${styleTag[1]}">${styleTag[0]}</span>
         <span class="tag ${a.status==='RUNNING'?'t-ok':'t-no'}">${a.status==='RUNNING'?'● '+(LANG==='zh'?'运行中':'RUNNING'):'⏸ '+(LANG==='zh'?'已停止':'STOPPED')}</span>
@@ -633,6 +655,7 @@ function renderAgents(){
         ${a.customPrompt?`<span class="tag t-pur">📝 LLM</span>`:''}
         <span style="flex:1"></span>
         <span class="${pnl>=0?'pos':'neg'}" style="font-weight:800;font-size:16px">${usd(pnl)}</span>
+        <button class="btn ghost mini" onclick="openAgentDetail('${a.id}')">${I18N.viewDetail[LANG==='zh'?0:1]}</button>
         ${a.status==='RUNNING'?`<button class="btn ghost mini" onclick="agentAction('${a.id}','stop')">${LANG==='zh'?'停止':'Stop'}</button>`:`<button class="btn ghost mini" onclick="agentAction('${a.id}','start')">${LANG==='zh'?'启动':'Start'}</button><button class="btn danger mini" onclick="agentAction('${a.id}','delete')">✕</button>`}
       </div>
       <div class="dim" style="font-size:11px;margin-top:8px">$${a.capitalUsd} · ${LANG==='zh'?'回合':'rounds'} ${a.rounds||0}/${a.maxRounds||120}</div>
@@ -658,6 +681,56 @@ function renderAgents(){
         [new Date(last.entryAt).toLocaleTimeString(),LANG==='zh'?'现在':'now'],v=>'$'+v.toFixed(2));
     }
   });
+}
+const STYLE_META={conservative:['🛡','保守 Conservative','净APR≥15% · 30%仓位 · 退出线 2%'],balanced:['⚖️','均衡 Balanced','净APR≥8% · 50%仓位 · 退出线 0%'],aggressive:['🔥','激进 Aggressive','净APR≥4% · 80%仓位 · 退出线 -2%']};
+function openAgentDetail(id){
+  const a=ME.agents.find(x=>x.id===id);if(!a)return;
+  const pos=ME.positions.filter(p=>p.agentId===a.id);
+  const open=pos.find(p=>p.status==='OPEN');
+  const closed=pos.filter(p=>p.status==='CLOSED').sort((x,y)=>(y.closedAt||'').localeCompare(x.closedAt||''));
+  const pnl=pos.reduce((s,p)=>s+p.pnlUsd,0);
+  const wins=closed.filter(p=>p.pnlUsd>0).length;
+  const sm=STYLE_META[a.style];
+  const last=open||closed[0];
+  const roundsPct=Math.min(100,((a.rounds||0)/(a.maxRounds||120))*100);
+  $('agdrawer-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="font-size:20px;font-weight:800">🤖 ${a.name}</span>
+      <span class="tag ${a.mode==='LIVE'?'t-live':'t-paper'}">${a.mode==='LIVE'?(LANG==='zh'?'实盘':'LIVE'):(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
+      <span class="tag ${a.status==='RUNNING'?'t-ok':'t-no'}">${a.status==='RUNNING'?'● RUNNING':'⏸ STOPPED'}</span>
+      <span style="flex:1"></span><span class="iconbtn" style="cursor:pointer" onclick="$('agdrawer').classList.remove('on')">✕</span>
+    </div>
+    <div class="cards" style="grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0">
+      <div class="stat"><div class="k">${LANG==='zh'?'累计 PnL':'PnL'}</div><div class="v ${pnl>=0?'pos':'neg'}" style="font-size:18px">${usd(pnl)}</div></div>
+      <div class="stat"><div class="k">${LANG==='zh'?'回合':'Rounds'}</div><div class="v" style="font-size:18px">${a.rounds||0}/${a.maxRounds||120}</div></div>
+      <div class="stat"><div class="k">${LANG==='zh'?'胜率':'Win'}</div><div class="v" style="font-size:18px">${closed.length?Math.round(wins/closed.length*100)+'%':'—'}</div></div>
+    </div>
+    <div class="rounds" style="margin-bottom:6px"><i style="width:${roundsPct}%"></i></div>
+    <div class="sec-t">${I18N.agConfig[LANG==='zh'?0:1]}</div>
+    <div style="font-size:13px;line-height:2">
+      ${sm[0]} <b>${sm[1]}</b> <span class="dim">· ${sm[2]}</span><br>
+      ${LANG==='zh'?'检测标的':'Target'}: <b>${a.asset==='ALL'?(LANG==='zh'?'全市场自动选':'ALL'):a.asset}</b> · ${LANG==='zh'?'资金':'capital'} $${a.capitalUsd} · ${LANG==='zh'?'创建':'created'} ${new Date(a.createdAt).toLocaleString()}<br>
+      ${a.customPrompt?`<div style="margin-top:6px"><span class="tag t-pur">📝 LLM 偏好</span><pre style="white-space:pre-wrap;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:4px;font-size:12px;font-family:inherit">${a.customPrompt.replace(/</g,'&lt;')}</pre></div>`:`<span class="dim">${LANG==='zh'?'无自定义 LLM 偏好':'no custom LLM preference'}</span>`}
+    </div>
+    ${open?`<div class="sec-t">${LANG==='zh'?'当前持仓':'Open position'}</div>
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--panel2);font-size:13px">
+        <b>${open.asset}</b> $${open.notionalUsd.toFixed(0)} · ${LANG==='zh'?'入场净APR':'entry'} ${fmt(open.entryNetApr,1)} · ${LANG==='zh'?'当前费率':'rate'} ${fmt(open.currentHourlyFundingPct,5)}/h · funding <span class="pos">${usd(open.fundingAccruedUsd)}</span> · PnL <span class="${open.pnlUsd>=0?'pos':'neg'}">${usd(open.pnlUsd)}</span>
+        <button class="btn ghost mini" style="margin-left:8px" onclick="closePos('${open.id}');$('agdrawer').classList.remove('on')">${LANG==='zh'?'平仓':'Close'}</button></div>`:''}
+    ${last&&last.series&&last.series.length>1?`<div class="sec-t">${LANG==='zh'?'预测 vs 实际':'Predicted vs actual'}</div>
+      <svg class="chart" id="agdchart" height="90" preserveAspectRatio="none"></svg>
+      <div class="legend"><span><i style="background:var(--blue)"></i>${LANG==='zh'?'预测':'predicted'}</span><span><i style="background:var(--green)"></i>${LANG==='zh'?'实际':'actual'}</span>${last.deviationNote?`<span class="dim">· ${last.deviationNote}</span>`:''}</div>`:''}
+    ${a.memory&&a.memory.length?`<div class="sec-t">🧠 ${I18N.agMemory[LANG==='zh'?0:1]}</div>
+      ${[...a.memory].reverse().map(m=>`<div style="border-left:2px solid var(--purple);padding:6px 10px;margin:6px 0;font-size:12px;background:var(--panel2);border-radius:6px"><b>${m.asset}</b> ${usd(m.pnlUsd)} · ${LANG==='zh'?'预估':'est'} ${fmt(m.entryNetApr,1)}→${LANG==='zh'?'实现':'got'} ${fmt(m.realizedApr,1)} · ${new Date(m.at).toLocaleString()}<br><span class="dim">${m.lesson}</span></div>`).join('')}`:''}
+    ${closed.length?`<div class="sec-t">${I18N.agPositions[LANG==='zh'?0:1]}（${closed.length}）</div>
+      <div style="overflow-x:auto"><table><thead><tr><th>${LANG==='zh'?'时间':'time'}</th><th>${LANG==='zh'?'资产':'asset'}</th><th>${LANG==='zh'?'持有':'held'}</th><th>PnL</th><th>${LANG==='zh'?'原因':'reason'}</th></tr></thead><tbody>
+      ${closed.map(p=>`<tr><td class="dim">${new Date(p.closedAt).toLocaleTimeString()}</td><td><b>${p.asset}</b></td><td>${p.holdHours.toFixed(1)}h</td><td class="${p.pnlUsd>=0?'pos':'neg'}">${usd(p.pnlUsd)}</td><td class="dim">${p.closeReason}</td></tr>`).join('')}
+      </tbody></table></div>`:''}
+    <div class="sec-t">${LANG==='zh'?'完整决策日志':'Full decision log'}（${a.log.length}）</div>
+    <div class="log" style="max-height:260px">${[...a.log].reverse().map(l=>`<div><span class="dim">${new Date(l.at).toLocaleString()}</span> ${l.msg}</div>`).join('')}</div>`;
+  $('agdrawer').classList.add('on');
+  if(last&&last.series&&last.series.length>1){
+    setTimeout(()=>lineChart($('agdchart'),[{data:last.series.map(s=>s.predictedPnlUsd),color:'var(--blue)',dash:true},{data:last.series.map(s=>s.pnlUsd),color:'var(--green)'}],90,[new Date(last.entryAt).toLocaleTimeString(),open?(LANG==='zh'?'现在':'now'):(LANG==='zh'?'平仓':'closed')],v=>'$'+v.toFixed(2)),30);
+  }
 }
 function renderEarnings(){
   const S=wsSum();const wl=WORKSPACE==='PAPER'?(LANG==='zh'?'🧪 虚拟盘':'🧪 Virtual'):(LANG==='zh'?'⚡ 实盘':'⚡ Live');
