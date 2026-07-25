@@ -10,3 +10,6 @@ data/*.sqlite*
 
 # 运行时产物（含 KILL/heartbeat/台账，永不入库）
 data/
+
+# 产品需求文档（内部，不入库）
+docs/产品文档/
