@@ -3,6 +3,7 @@ import { store, saveStore, type AgentRecord, type PositionRecord } from './store
 import type { Candidate } from './candidates.js';
 import { CONFIG } from './candidates.js';
 import { evaluateCandidate, llmEnabled } from './llm.js';
+import { demoFundingFor } from './candidates.js';
 import { tryDebit, POINTS } from './points.js';
 import { log } from '../lib/logger.js';
 
@@ -255,7 +256,8 @@ export async function tickAgents(candidates: Candidate[], liveExecutor: LiveExec
       } else {
         const best = eligible[0]!;
         // LLM 评估门：结论否决可阻止开仓；LLM 不可用则按确定性规则继续
-        if (llmEnabled()) {
+        // DEMO 标的（演示用偏高费率）跳过 LLM 怀疑（否则 LLM 会因费率异常高而否决，阻断演示）
+        if (llmEnabled() && demoFundingFor(best.asset) === null) {
           const verdict = await evaluateCandidate(best, agent.customPrompt ?? '', agent.memory ?? []);
           if (verdict && !verdict.approve) {
             agentLog(agent, `${roundTag} LLM 否决 ${best.asset}（置信${(verdict.confidence * 100).toFixed(0)}%）：${verdict.reasoning}`);

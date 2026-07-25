@@ -108,13 +108,16 @@ async function readBodyStrict(req: IncomingMessage): Promise<Record<string, unkn
 const spotByBase = () => new Map((scan?.spots ?? []).map((s) => [s.baseToken, s]));
 function buildRates(s: ScanState) {
   const sb = spotByBase();
-  return s.perps.map((p) => ({
-    coin: p.coin,
-    hourlyFundingPct: p.hourlyFunding * 100,
-    annualizedPct: p.hourlyFunding * 24 * 365 * 100,
-    markPx: p.markPx,
-    hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
-  }));
+  return s.perps.map((p) => {
+    const f = demoFundingFor(p.coin) ?? p.hourlyFunding; // demo 标的费率与机会保持一致
+    return {
+      coin: p.coin,
+      hourlyFundingPct: f * 100,
+      annualizedPct: f * 24 * 365 * 100,
+      markPx: p.markPx,
+      hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
+    };
+  });
 }
 
 // ---------- x402 付费报告（挂一个只有这一条路由的 Express app）----------
@@ -291,6 +294,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (path === '/api/agents' && req.method === 'POST') {
+      grantWelcomeIfNew(owner); // 确保创建即有燃料（否则 triggerEngineSoon 的首个 tick 会因 0 积分即停）
       const b = await readBody(req);
       const mine = store.agents.filter((a) => a.owner === owner);
       if (mine.length >= LIMITS.maxAgentsPerUser) return json(res, 400, { error: `每个用户最多 ${LIMITS.maxAgentsPerUser} 个 Agent` });
