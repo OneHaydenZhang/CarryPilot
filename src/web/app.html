@@ -1147,44 +1147,63 @@ function parseOrderIntent(t){
 }
 
 // 确认下单弹窗（拉 quote → 展示预期收益/风险 → 确认开仓）
+let ORDER={asset:'',amount:1000,holdDays:7};
 async function openOrderConfirm(asset,amount){
   if(!token){alert(LANG==='zh'?'请先连接钱包':'Connect wallet first');return}
-  const mode=WORKSPACE;
-  $('order-body').innerHTML='<div class="dim">加载报价…</div>';$('ordermodal').classList.add('on');
-  const q=await (await authFetch('/api/agent/quote',{method:'POST',body:JSON.stringify({asset,notionalUsd:amount,mode})})).json();
-  if(q.error){$('order-body').innerHTML=`<div class="neg">${q.error}</div><button class="btn ghost mini" style="margin-top:10px" onclick="$('ordermodal').classList.remove('on')">关闭</button>`;return}
-  const e=q.estimate;const accepted=q.decision==='ACCEPTED';
+  ORDER={asset,amount:Number(amount)||1000,holdDays:7};
+  $('order-body').innerHTML='<div class="dim">'+(LANG==='zh'?'加载报价…':'loading…')+'</div>';$('ordermodal').classList.add('on');
+  await refreshOrder();
+}
+async function refreshOrder(){
+  const zh=LANG==='zh';
+  const q=await (await authFetch('/api/agent/quote',{method:'POST',body:JSON.stringify({asset:ORDER.asset,notionalUsd:ORDER.amount,mode:'PAPER'})})).json();
+  if(q.error){$('order-body').innerHTML=`<div class="neg">${q.error}</div><button class="btn ghost mini" style="margin-top:10px" onclick="$('ordermodal').classList.remove('on')">${zh?'关闭':'Close'}</button>`;return}
+  const perHour=(ORDER.amount*(q.legs.find(l=>l.instrument==='perp')?.hourlyFundingPct??0))/100;
+  const oneTime=q.estimate.oneTimeCostUsd*(ORDER.amount/q.notionalUsd); // 按当前金额缩放
+  const grossHold=perHour*24*ORDER.holdDays;
+  const netHold=grossHold-oneTime;
+  const accepted=q.decision==='ACCEPTED';
   const riskTag=q.risk==='LOW'?'t-ok':q.risk==='MEDIUM'?'t-warn':'t-live';
   $('order-body').innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span style="font-size:19px;font-weight:800">${q.asset} ${LANG==='zh'?'套利下单':'Arbitrage order'}</span>
-      ${LIVE_TAG()}
-      <span class="tag ${riskTag}">RISK ${q.risk}</span>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <span style="font-size:19px;font-weight:800">${q.asset} ${zh?'套利下单':'Arbitrage order'}</span>
+      ${LIVE_TAG()}<span class="tag ${riskTag}">RISK ${q.risk}</span>
     </div>
-    <div class="narr" style="margin:6px 0">${q.narrative.zh}</div>
-    <div class="sec-t">${LANG==='zh'?'组合结构':'Structure'}</div>
-    ${q.legs.map(l=>`<div style="font-size:12px;padding:3px 0"><b class="${l.side==='long'?'pos':'neg'}">${l.side==='long'?'▲多':'▼空'}</b> ${l.market} · ${l.instrument}${l.hourlyFundingPct!==null?` · ${fmt(l.hourlyFundingPct,5)}/h`:''}</div>`).join('')}
-    <div class="sec-t">${LANG==='zh'?'预期收益（投入 $':'Estimate ($'}${q.notionalUsd}）</div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:12px">
-      <div>每 8h：<span class="pos">+$${e.per8hUsd.toFixed(2)}</span></div>
-      <div>每天：<span class="pos">+$${e.perDayUsd.toFixed(2)}</span></div>
-      <div>每周：<span class="pos">+$${e.perWeekUsd.toFixed(2)}</span></div>
-      <div>一次性成本：<span class="neg">-$${e.oneTimeCostUsd.toFixed(2)}</span></div>
-      <div style="grid-column:1/3">净/周（扣成本）：<b class="${e.netPerWeekUsd>=0?'pos':'neg'}">${usd(e.netPerWeekUsd)}</b> · 净APR ${fmt(q.netApr,1)}</div>
+    <div class="narr" style="margin:6px 0">${q.narrative[LANG]||q.narrative.zh}</div>
+    <div class="sec-t">${zh?'① 调整投入金额':'① Amount (USD)'}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="ord-amt" type="number" min="50" step="50" value="${ORDER.amount}" style="width:130px" oninput="ORDER.amount=Math.max(50,Number(this.value)||50)" onchange="refreshOrder()">
+      <span class="dim" style="font-size:12px">USD</span>
+      ${[500,1000,5000,10000].map(v=>`<span class="chip" style="cursor:pointer;padding:5px 12px" onclick="ORDER.amount=${v};refreshOrder()">$${v>=1000?v/1000+'k':v}</span>`).join('')}
+    </div>
+    <div class="sec-t">${zh?'② 计划持有时长':'② Hold period'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${[[1,zh?'1天':'1d'],[3,zh?'3天':'3d'],[7,zh?'1周':'1w'],[14,zh?'2周':'2w'],[30,zh?'1月':'1mo']].map(([d,l])=>`<span class="chip" style="cursor:pointer;padding:6px 13px;${ORDER.holdDays===d?'border-color:var(--green);color:var(--text)':''}" onclick="ORDER.holdDays=${d};refreshOrder()">${l}</span>`).join('')}
+    </div>
+    <div class="sec-t">${zh?'两腿结构（对冲，Δ 中性）':'Legs (Δ-neutral hedge)'}</div>
+    ${q.legs.map(l=>`<div style="font-size:12px;padding:3px 0"><b class="${l.side==='long'?'pos':'neg'}">${l.side==='long'?'▲'+(zh?'多':'LONG'):'▼'+(zh?'空':'SHORT')}</b> ${l.market} · ${l.instrument}${l.hourlyFundingPct!==null?` · ${fmt(l.hourlyFundingPct,5)}/h`:''}</div>`).join('')}
+    <div class="sec-t">${zh?`预期收益 · 投入 $${ORDER.amount} · 持有 ${ORDER.holdDays} 天`:`Estimate · $${ORDER.amount} · ${ORDER.holdDays}d`}</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:12.5px">
+      <div>${zh?'每 8h':'per 8h'}：<span class="pos">+$${(perHour*8).toFixed(2)}</span></div>
+      <div>${zh?'每天':'per day'}：<span class="pos">+$${(perHour*24).toFixed(2)}</span></div>
+      <div>${zh?'毛收入':'gross'}(${ORDER.holdDays}d)：<span class="pos">+$${grossHold.toFixed(2)}</span></div>
+      <div>${zh?'一次性成本':'one-time cost'}：<span class="neg">-$${oneTime.toFixed(2)}</span></div>
+      <div style="grid-column:1/3;padding-top:4px;border-top:1px solid var(--border)">${zh?'净收益':'net'}(${ORDER.holdDays}d)：<b class="${netHold>=0?'pos':'neg'}" style="font-size:15px">${usd(netHold)}</b> · ${zh?'净APR':'net APR'} ${fmt(q.netApr,1)} · ${zh?'成本覆盖比':'coverage'} ${q.costCoverage?.toFixed(2)??'-'}</div>
     </div>
     <div style="font-size:11px;color:var(--amber);margin:8px 0">⚠ ${q.warning}</div>
     <div style="display:flex;gap:8px;margin-top:10px">
-      ${accepted?`<button class="btn" style="flex:1" onclick="confirmOrder('${q.asset}',${q.notionalUsd},'${mode}')">✅ ${LANG==='zh'?'确认下单':'Confirm'}</button>`:`<button class="btn" style="flex:1;opacity:.5" disabled>${LANG==='zh'?'风控不通过':'Rejected'}</button>`}
-      <button class="btn ghost" onclick="$('ordermodal').classList.remove('on')">${LANG==='zh'?'取消':'Cancel'}</button>
+      ${accepted?`<button class="btn" style="flex:1" onclick="confirmOrder()">✅ ${zh?`确认开仓 $${ORDER.amount}`:`Confirm $${ORDER.amount}`}</button>`:`<button class="btn" style="flex:1;opacity:.5" disabled>${zh?'风控不通过':'Rejected'}</button>`}
+      <button class="btn ghost" onclick="$('ordermodal').classList.remove('on')">${zh?'取消':'Cancel'}</button>
     </div>
     <div class="dim" style="font-size:10px;margin-top:8px">${q.disclaimer}</div>`;
 }
-async function confirmOrder(asset,notionalUsd,mode){
-  $('order-body').insertAdjacentHTML('beforeend','<div class="dim" id="ord-msg" style="margin-top:8px">下单中…</div>');
-  const d=await (await authFetch('/api/agent/order',{method:'POST',body:JSON.stringify({asset,notionalUsd,mode})})).json();
-  if(d.error){$('ord-msg').innerHTML=`<span class="neg">${d.error}</span>`;return}
+async function confirmOrder(){
+  const zh=LANG==='zh';
+  $('order-body').insertAdjacentHTML('beforeend',`<div class="dim" id="ord-msg" style="margin-top:8px">${zh?'开仓中…':'opening…'}</div>`);
+  const d=await (await authFetch('/api/agent/order',{method:'POST',body:JSON.stringify({asset:ORDER.asset,notionalUsd:ORDER.amount,mode:'PAPER'})})).json();
+  if(d.error){$('ord-msg').innerHTML=`<span class="neg">${errText(d)}</span>`;return}
   $('ordermodal').classList.remove('on');
-  if(chatStarted) appendMsg('agent',`✅ ${LANG==='zh'?`已开仓 ${asset} $${notionalUsd}。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${asset} $${notionalUsd}.`}`);
+  if(chatStarted) appendMsg('agent',`✅ ${zh?`已开仓 ${ORDER.asset} $${ORDER.amount}。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${ORDER.asset} $${ORDER.amount}.`}`);
   loadMe();
 }
 
