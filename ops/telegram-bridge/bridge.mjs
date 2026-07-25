@@ -14,6 +14,7 @@ const ALLOWED = (process.env.TELEGRAM_ALLOWED_CHAT_ID ?? '').split(',').map((s) 
 const PROJECT_DIR = process.env.PROJECT_DIR ?? process.cwd();
 const CLAUDE_BIN = process.env.CLAUDE_BIN ?? `${process.env.HOME}/.local/bin/claude`;
 const RUN_TIMEOUT_MS = Number(process.env.RUN_TIMEOUT_MS ?? 30 * 60 * 1000);
+const HEARTBEAT_MS = Number(process.env.HEARTBEAT_MS ?? 5 * 60 * 1000);
 
 if (!TOKEN) {
   console.error('TELEGRAM_BOT_TOKEN missing');
@@ -40,21 +41,27 @@ import { spawn } from 'node:child_process';
 let busy = false;
 let continueSession = true; // false = 下一条消息开新会话
 
-function runClaude(prompt) {
+function runClaude(prompt, chatId) {
   return new Promise((resolve) => {
     const args = ['-p', prompt, '--permission-mode', 'bypassPermissions'];
     if (continueSession) args.push('--continue');
     const child = spawn(CLAUDE_BIN, args, { cwd: PROJECT_DIR, env: process.env });
     let out = '';
     let err = '';
+    const startedAt = Date.now();
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
       out += '\n[bridge] 超时被终止';
     }, RUN_TIMEOUT_MS);
+    const heartbeat = setInterval(() => {
+      const mins = Math.round((Date.now() - startedAt) / 60000);
+      send(chatId, `⏳ 任务仍在运行中（已 ${mins} 分钟）`).catch(() => {});
+    }, HEARTBEAT_MS);
     child.stdout.on('data', (d) => (out += d));
     child.stderr.on('data', (d) => (err += d));
     child.on('close', (code) => {
       clearTimeout(timer);
+      clearInterval(heartbeat);
       continueSession = true; // 首条之后都延续会话
       resolve(code === 0 ? out.trim() : `${out.trim()}\n[exit ${code}] ${err.trim().slice(-500)}`);
     });
@@ -92,7 +99,7 @@ async function handle(msg) {
   busy = true;
   await api('sendChatAction', { chat_id: chatId, action: 'typing' });
   try {
-    const reply = await runClaude(text);
+    const reply = await runClaude(text, chatId);
     await send(chatId, reply);
   } catch (e) {
     await send(chatId, `[bridge error] ${String(e).slice(0, 500)}`);

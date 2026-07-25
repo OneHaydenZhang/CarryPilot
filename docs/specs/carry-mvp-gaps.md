@@ -32,16 +32,17 @@
 - **复用现状**：下单/风控/双腿回滚已完备，只需加「一次性下单（非 Agent 托管）」入口 + 确认 UI
 - 工作量：中（前端对话+弹窗组件 + 1 个后端端点）
 
-### 工作项 B：对外 Agent 能力（MCP + HTTP）— **本轮已完成 HTTP 地基**
+### 工作项 B：对外 Agent 能力（MCP + HTTP + A2A）— **已完成**
 把「对话查资费 + 查套利机会」打包成对外可调用 Agent。
 
-- ✅ **已实现（本轮）**：
-  - `GET /.well-known/agent-card.json` — 标准 Agent Card（身份/技能/约束/风险）
-  - `GET|POST /api/agent/query` — 意图识别（funding_rates / arbitrage_opportunity）→ 返回费率/机会
-- 🔲 **待做**：
-  - **MCP server**：`vendor/carrypilot-mcp` 暴露 `get_funding_rates` / `find_arbitrage` 两个 tool，内部转 HTTP `/api/agent/query`；发布配置供其他 harness 接入
-  - **首页透出**：landing 加「作为 Agent 调用我」板块——展示 Agent Card URL、MCP 接入片段、curl 示例
-- 工作量：小（MCP 是 HTTP 的薄封装 + 首页文档板块）
+- ✅ **已实现**：
+  - `GET /.well-known/agent-card.json` — 标准 Agent Card（身份/技能/约束/风险 + `additionalInterfaces` 声明三种接入点）
+  - `GET|POST /api/agent/query` — 意图识别（funding_rates / arbitrage_opportunity）→ 返回费率/机会（HTTP+JSON 底座）
+  - `POST /api/a2a` — **A2A 协议**：标准 JSON-RPC 2.0 `message/send`，`src/web/agentApi.ts::handleA2A`
+  - `POST /mcp` — **MCP server**（Streamable HTTP，无状态）：`get_funding_rates` / `find_arbitrage` 两个 tool，内部转调 `/api/agent/query`，`src/web/mcpServer.ts`
+  - **首页透出**：landing「把 CarryPilot 当 Agent 调用」板块——HTTP/A2A/MCP 三张卡片 + curl 示例 + MCP client config + x402 路线图说明
+  - 验证：22 项验收全过（含新路由未破坏既有接口）；A2A 用 curl 手测 message/send 正常路径 + 4 类错误路径（-32600/-32601/-32602/-32001）；MCP 用 SDK Client（`StreamableHTTPClientTransport`）实测 `tools/list` + 两个 `tools/call` 均返回预期数据
+- 🔲 **待做（下一迭代）**：外部第三方 harness（非自测）实际接入验证；A2A `tasks/get` 若未来加异步长任务需要补状态存储
 
 ### 工作项 C：x402 集成（P0）— **本轮已验证可行**
 其他 Agent 付 USDC 获取完整报告。

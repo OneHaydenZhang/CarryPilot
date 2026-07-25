@@ -2,16 +2,20 @@
 
 > 任何 harness/编排器操作本项目时的接线说明：有哪些工具面、怎么调、什么不能碰。
 
-## 对外暴露的 Agent 接口（A2A）
+## 对外暴露的 Agent 接口（A2A / MCP）
 
-- **Agent Card**：`GET /.well-known/agent-card.json`（公网，无鉴权）——身份、技能、约束、风险声明
+- **Agent Card**：`GET /.well-known/agent-card.json`（公网，无鉴权）——身份、技能、约束、风险声明、`additionalInterfaces`（A2A/MCP/HTTP 三种接入点）
+- **A2A（Agent2Agent 协议）**：`POST /api/a2a` — 标准 JSON-RPC 2.0 `message/send`；文本 part 走 `agentApi.classify()` 意图识别，返回文本 part（人读）+ data part（机器读）。`tasks/get`/`tasks/cancel` 返回 -32001（同步完成，不留任务状态）。实现在 `src/web/agentApi.ts::handleA2A`
+- **MCP（Model Context Protocol）**：`POST /mcp` — Streamable HTTP，无状态（每请求现建 `McpServer`+`transport`，用完关闭）。暴露 `get_funding_rates`、`find_arbitrage` 两个 tool，内部转调 `/api/agent/query`。实现在 `src/web/mcpServer.ts`
 - **技能 → HTTP 映射**（当前免鉴权只读；写操作需钱包签名会话）：
   | Skill | 端点 | 说明 |
   |---|---|---|
+  | `funding_rates` / `arbitrage_opportunity` | `GET/POST /api/agent/query` | 对话式查询，A2A/MCP 底层都转调这个 |
   | `opportunity_discovery` | `GET /api/scan` | 全市场成本后候选 + 拒绝码 + 叙述 + 收益表 |
   | `funding_history` | `GET /api/funding-history?coin=X` | 7 天小时费率序列 |
   | `agent_operation` | `POST /api/agents`（Bearer 会话） | 创建/启停套利 Agent（钱包签名登录后） |
   | `health` | `GET /api/health` | 存活与引擎版本 |
+- **x402（付费报告，规划中）**：`/api/agent/report` 走 x402 中间件收 USDC；402 报价握手已在 `scripts/x402-spike.ts` 验证跑通，生产接线（金库钱包/facilitator key/挂路由）待做，见 `docs/specs/carry-mvp-gaps.md` 工作项 C
 
 ## 内部工具面（开发/运维 harness 用）
 

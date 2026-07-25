@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<title>使用指南 — CarryPilot</title>
+<style>
+  :root{--bg:#070b11;--panel:#10161f;--panel2:#151d29;--border:#222c3a;--text:#e9eef5;--dim:#8797a8;
+        --green:#2ee6a8;--blue:#4d9fff;--amber:#ffb454;--red:#ff5d6c;--purple:#a78bfa;}
+  *{box-sizing:border-box;margin:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font:15px/1.75 "Inter",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  a{color:var(--blue)}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;color:var(--blue);font-size:.9em;background:rgba(77,159,255,.08);padding:1px 6px;border-radius:5px}
+  nav{position:sticky;top:0;z-index:10;background:rgba(7,11,17,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;padding:16px 28px}
+  .logo{font-size:18px;font-weight:800}.logo span{color:var(--green)}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:9px 20px;border-radius:10px;text-decoration:none;font-size:14px;border:none;cursor:pointer}
+  .btn.ghost{background:none;border:1px solid var(--border);color:var(--text);margin-right:8px}
+  .shell{max-width:880px;margin:0 auto;padding:0 28px 100px}
+  .hero{padding:56px 0 20px}
+  .hero .tag{color:var(--green);font-size:12px;font-weight:800;letter-spacing:.06em;padding:5px 14px;border:1px solid rgba(46,230,168,.4);border-radius:20px;background:rgba(46,230,168,.08);display:inline-block;margin-bottom:16px}
+  .hero h1{font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:14px}
+  .hero p{color:var(--dim);font-size:16px;max-width:680px}
+  .toc{display:flex;gap:8px;flex-wrap:wrap;margin:26px 0 10px;padding-bottom:26px;border-bottom:1px solid var(--border)}
+  .toc a{color:var(--dim);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;text-decoration:none}
+  .toc a:hover{color:var(--text);border-color:var(--green)}
+  /* 步骤时间线 */
+  .steps{position:relative;margin:30px 0}
+  .steps::before{content:"";position:absolute;left:23px;top:14px;bottom:14px;width:2px;background:linear-gradient(var(--border),var(--border) 90%,transparent)}
+  .step{position:relative;padding:0 0 42px 64px}
+  .step:last-child{padding-bottom:6px}
+  .step .num{position:absolute;left:0;top:0;width:48px;height:48px;border-radius:14px;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--green)}
+  .step h2{font-size:20px;font-weight:800;margin-bottom:4px;scroll-margin-top:70px}
+  .step .desc{color:var(--dim);font-size:13.5px;margin-bottom:14px}
+  .step p{margin-bottom:10px}
+  .optbadge{display:inline-block;font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--border);border-radius:12px;padding:2px 10px;margin-left:8px;vertical-align:middle}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin:12px 0}
+  .card b{display:block;margin-bottom:4px}
+  .need{background:rgba(77,159,255,.08);border:1px solid rgba(77,159,255,.35);border-radius:12px;padding:14px 16px;font-size:13.5px;margin:14px 0}
+  .need .lb{color:var(--blue);font-weight:800;font-size:12px;letter-spacing:.03em;margin-bottom:4px;display:block}
+  .warn{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#ffd9a0;margin:14px 0}
+  .warn .lb{color:var(--amber);font-weight:800;font-size:12px;letter-spacing:.03em;margin-bottom:4px;display:block}
+  .ok{background:rgba(46,230,168,.08);border:1px solid rgba(46,230,168,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#a8f0d8;margin:14px 0}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media(max-width:640px){.branch{grid-template-columns:1fr}}
+  .branch .b{border:1px solid var(--border);border-radius:14px;padding:16px;background:var(--panel2)}
+  .branch .b.live{border-color:rgba(255,93,108,.35)}
+  .branch .b.paper{border-color:rgba(77,159,255,.35)}
+  .branch .b h3{font-size:14px;margin-bottom:8px}
+  .branch .b ol{padding-left:18px;font-size:13px;color:var(--dim)}
+  .branch .b ol li{margin-bottom:6px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+  .pill.field{background:rgba(167,139,250,.14);color:var(--purple)}
+  ul.plain{padding-left:20px;color:var(--dim);font-size:13.5px}
+  ul.plain li{margin-bottom:6px}
+  .faq{border-bottom:1px solid var(--border);padding:16px 0}
+  .faq b{display:block;margin-bottom:6px;font-size:14px}
+  .faq p{color:var(--dim);font-size:13.5px}
+  section{padding:10px 0}
+  footer{color:var(--dim);font-size:13px;padding:30px 28px;text-align:center}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="rabbit-icon" viewBox="0 0 64 64">
+  <defs><linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2ee6a8"/><stop offset="100%" stop-color="#1bc4ff"/></linearGradient></defs>
+  <rect x="16" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(-12 21.5 20)"/>
+  <rect x="37" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(12 42.5 20)"/>
+  <rect x="19.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(-12 21.5 20)"/>
+  <rect x="40.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(12 42.5 20)"/>
+  <circle cx="32" cy="41" r="19" fill="url(#rgrad)"/>
+  <circle cx="25.5" cy="38" r="2.5" fill="#04121c"/>
+  <circle cx="38.5" cy="38" r="2.5" fill="#04121c"/>
+  <path d="M29 46c1.2 1.3 3.8 1.3 5 0" stroke="#04121c" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="32" cy="43.3" rx="1.7" ry="1.2" fill="#04121c"/>
+</symbol></svg>
+
+<nav>
+  <div class="logo"><svg width="24" height="24" style="vertical-align:-7px;margin-right:2px"><use href="#rabbit-icon"/></svg> Carry<span>Pilot</span> <span style="color:var(--dim);font-weight:400;font-size:13px">/ 使用指南</span></div>
+  <div><a class="btn ghost" href="/en/guide">EN</a><a class="btn ghost" href="/">← 首页</a><a class="btn" href="/app">Launch App</a></div>
+</nav>
+<div class="shell">
+  <div class="hero">
+    <span class="tag">USER GUIDE</span>
+    <h1>从连接钱包到收到第一笔资金费，全流程</h1>
+    <p>这份指南按真实操作顺序走一遍：每一步在哪个 tab、点什么按钮、弹窗里要做什么。凡是<b style="color:var(--blue)">需要你亲自动手</b>的地方（签名、转账、点某个按钮）都用蓝色框标出来——这些是系统不会替你做的事。</p>
+  </div>
+
+  <div class="toc">
+    <a href="#s1">① 连接钱包</a>
+    <a href="#s2">② 看行情</a>
+    <a href="#s3">③ 燃料</a>
+    <a href="#s4">④ 创建 Agent</a>
+    <a href="#s5">⑤ 运行中</a>
+    <a href="#s6">⑥ 复盘</a>
+    <a href="#faq">常见问题</a>
+    <a href="#checklist">配合清单</a>
+  </div>
+
+  <div class="steps">
+
+    <div class="step" id="s1">
+      <div class="num">1</div>
+      <h2>连接钱包</h2>
+      <div class="desc">右上角「连接钱包」→ 选钱包 → 签一个消息。全程不发交易、不花 gas、不碰你的资金。</div>
+      <p>点顶部导航栏的 <b>连接钱包</b> 按钮，弹出选择框：</p>
+      <ul class="plain">
+        <li>电脑端：浏览器装了 MetaMask / OKX Wallet / Rabby 等插件时，会自动列出（EIP-6963 多钱包识别），点你要用的那个</li>
+        <li>手机端：如果是在普通浏览器（非钱包内置浏览器）打开本站，会给你 MetaMask / OKX / Trust 的深链按钮——点一下会跳转到对应钱包 App 内打开本站</li>
+      </ul>
+      <div class="need"><span class="lb">🙋 需要你配合</span>钱包会弹出一条待签名消息（<code>personal_sign</code>），内容是一次性 nonce，用来证明这个地址是你本人控制。<b>点「签名」确认</b>即可——这不是转账，钱包不会显示 gas 费。手机端如果是从深链跳转过去的，进入钱包内置浏览器后要<b>重新点一次「连接钱包」</b>才会弹出签名。</div>
+      <p>签名成功后，右上角会显示你的地址缩写（如 <code>0xAb12…9f3D</code>），登录状态保存在浏览器本地，刷新页面不用重连。</p>
+    </div>
+
+    <div class="step" id="s2">
+      <div class="num">2</div>
+      <h2>看懂费率现状 / 套利机会</h2>
+      <div class="desc">这两个 tab 不需要连钱包，谁都能看。建议先在这两页转一圈，搞清楚现在值不值得开 Agent。</div>
+      <p><b>📡 费率现状</b>：全市场资金费率表，标签筛选（有机会 / 多付费 / 空付费 / 费率偏高 / 波动大 / 包装现货 / 仅观察）。点一行会展开该标的近 7 天的小时费率曲线。</p>
+      <p><b>🔬 套利机会</b>：每张卡片是引擎算出来的一个候选组合。<b style="color:var(--green)">绿色高亮</b>的是「扣完成本仍为正」的真实机会；点卡片展开看对冲结构（现货腿 + 永续腿）、成本瀑布图（一步步扣手续费/滑点/准备金）、以及投入 $1,000～$20,000 的大白话收益表。</p>
+      <div class="ok">💡 全市场经常没有机会——这不是 bug。资金费率是波动的，引擎宁可诚实地说「暂无机会」也不会为了有内容显示而编个数。有 Agent 在跑的话，它会在机会出现时自动抓住，不需要你盯盘。</div>
+    </div>
+
+    <div class="step" id="s3">
+      <div class="num">3</div>
+      <h2>准备燃料（INJ 积分）</h2>
+      <div class="desc">Agent 每运行一回合（10 分钟）消耗积分，积分从哪来、怎么加，这一步说清楚。</div>
+      <p>连上钱包后系统会<b>自动送 500 点新用户体验积分</b>（约够跑 2500 回合，虚拟盘随便试不用充值）。想加更多，或者体验积分用完了，去 <b>设置 → INJ 积分</b>：</p>
+      <div class="card">
+        <b>充值流程</b>
+        <ol style="padding-left:18px;font-size:13.5px;color:var(--dim)">
+          <li>页面上会显示「金库地址」和「你的 Injective 原生地址」（由你登录的 EVM 地址自动推导，同一把私钥控制）</li>
+          <li>从你自己的钱包，<b>用上面那个 Injective 地址</b>转一笔原生 INJ 到金库地址</li>
+          <li>回到页面，点 <b>「我已转账，扫描到账」</b> 按钮</li>
+        </ol>
+      </div>
+      <div class="need"><span class="lb">🙋 需要你配合（两步都不能少）</span>① 转账这一步是你在自己的钱包 App / Injective 客户端里完成的，本站不会替你转；② <b>到账不是自动的</b>——转完之后必须回来手动点一次「我已转账，扫描到账」，系统才会去链上核对交易并加积分（按 txhash 去重，多点几次也不会重复入账，放心点）。</div>
+      <p>汇率与消耗：1 INJ = 100 积分，每个运行中的 Agent 每回合（10 分钟）消耗 0.2 积分。</p>
+    </div>
+
+    <div class="step" id="s4">
+      <div class="num">4</div>
+      <h2>创建 Agent</h2>
+      <div class="desc">Agent 中心 tab，先选工作区（虚拟盘 / 实盘），填表单，点创建。两条路径前置条件不一样，展开看你要走哪条。</div>
+      <table>
+        <tr><th>字段</th><th>说明</th></tr>
+        <tr><td><span class="pill field">名称</span></td><td>随便起，方便你在列表里认出它</td></tr>
+        <tr><td><span class="pill field">检测标的</span></td><td>选具体币种，或「全市场自动选」让引擎自己挑当前最优的</td></tr>
+        <tr><td><span class="pill field">风格</span></td><td>保守（净APR≥15%才进场·30%仓位）／均衡（≥8%·50%）／激进（≥4%·80%）——决定入场门槛和仓位比例</td></tr>
+        <tr><td><span class="pill field">资金</span></td><td>这个 Agent 可用的名义本金上限；虚拟盘最多 $100,000，实盘硬顶 $2,000（RiskGuard 强制，改不了）</td></tr>
+        <tr><td><span class="pill field">回合数</span></td><td>生命周期，10~120 回合可选（120 回合 ≈ 20 小时），用完自动收尾平仓</td></tr>
+        <tr><td><span class="pill field">LLM 决策偏好</span></td><td>可选，用预设模板或自定义「偏好标的/回避条件/最低置信度」，在系统风控框架内生效，不能让 AI 加杠杆或改数值</td></tr>
+      </table>
+      <p>每个用户最多同时开 5 个 Agent。填完点 <b>「创建并启动」</b>，会立刻触发第一次决策（不用等 10 分钟）。</p>
+
+      <div class="branch">
+        <div class="b paper">
+          <h3>🧪 虚拟盘（新手从这条开始）</h3>
+          <ol>
+            <li>模式选 PAPER</li>
+            <li>直接创建，零风险，用的是设置里的虚拟资金额度（默认 $10,000，想改去 设置→虚拟盘账户）</li>
+            <li>不涉及真实资产，唯一消耗的是积分</li>
+          </ol>
+        </div>
+        <div class="b live">
+          <h3>⚡ 实盘（真实下单，两个前提缺一不可）</h3>
+          <ol>
+            <li><b>Hyperliquid 账户要先有 USDC</b>——这个要你自己去 <a href="https://app.hyperliquid.xyz" target="_blank" rel="noopener">app.hyperliquid.xyz</a> 入金，CarryPilot 不负责充钱进去</li>
+            <li>回本站 <b>设置 → 交易授权</b>，点「授权实盘 API Wallet」，钱包会弹出<b>另一种签名</b>（EIP-712 结构化签名，跟登录时的签名不是一回事）——确认签名</li>
+            <li>系统会生成一个只属于你的 API Wallet（<b>只能下单交易，没有提币权限</b>），之后创建 LIVE Agent 才不会被拒绝</li>
+          </ol>
+        </div>
+      </div>
+      <div class="need"><span class="lb">🙋 需要你配合</span>没做完实盘两步就选 LIVE 模式创建 Agent，后端会直接拒绝并提示「实盘模式需先完成 API Wallet 授权」——不会帮你跳过。这一步是一次性的，授权过一次之后所有实盘 Agent 都能用。</div>
+    </div>
+
+    <div class="step" id="s5">
+      <div class="num">5</div>
+      <h2>Agent 运行期间，你要做什么</h2>
+      <div class="desc">正常情况下几乎不用管。它每 10 分钟自己：拉最新费率 → 算成本 → AI 判断 → 风控过滤 → 开仓/换仓/清仓/观望，每一步理由都写进日志。</div>
+      <p>你能做、也可能需要做的事：</p>
+      <ul class="plain">
+        <li>点 Agent 卡片进详情抽屉，看完整配置、交易记录（历史平仓）、沉淀的复盘记忆、决策日志</li>
+        <li>手动 <b>「停止」</b> / <b>「启动」</b>：停止后如果有持仓会先平仓再停；启动会让它从下一回合继续跑</li>
+        <li>手动 <b>「平仓」</b>：不想等 Agent 自己判断退出时，直接对当前持仓点平仓</li>
+        <li><b>「删除」</b>：仅对已停止且空仓的 Agent 可用</li>
+      </ul>
+      <div class="warn"><span class="lb">⚠ 会打断运行、需要你回来处理的情况</span>积分（燃料）耗尽时，Agent 会<b>自动暂停</b>并在日志里写「积分不足，Agent 已暂停」——它<b>不会</b>在你充值后自动恢复，你需要回到设置充值 INJ 积分，再回 Agent 中心手动点「启动」。回合数用尽（到 120 回合上限）也会自动收尾平仓并停止，同样需要你决定是否重新创建。</div>
+    </div>
+
+    <div class="step" id="s6">
+      <div class="num">6</div>
+      <h2>观测与复盘</h2>
+      <div class="desc">两个只读中心，随时看，不需要操作。</div>
+      <p><b>📈 收益中心</b>：全部 Agent 合计的 PnL 曲线、每笔平仓记录（含防篡改 Receipt 哈希）。</p>
+      <p><b>🛡️ 风险中心</b>：当前持仓的风险分级（LOW/MEDIUM/HIGH）、未来 48 小时三种情景（费率维持/衰减/翻负）的 PnL 预测曲线；完成实盘授权后这里还会显示「实盘账户观测」——Hyperliquid 账户净值、可提金额、真实持仓与近 7 天资金费结算记录。</p>
+    </div>
+
+  </div>
+
+  <section id="faq">
+    <h2 style="font-size:22px;font-weight:800;margin:20px 0 6px">常见问题</h2>
+    <div class="faq"><b>连接钱包要花 gas 吗？</b><p>不用。登录只是签一条消息（personal_sign），不上链、不花 gas。只有「实盘授权」（EIP-712）和你自己转 INJ 充值这两个动作涉及你的钱包在做真实操作，但授权签名本身也不花 gas，只有转账会花你自己钱包所在链的 gas。</p></div>
+    <div class="faq"><b>虚拟盘和实盘的数据会混在一起吗？</b><p>不会。Agent、持仓、收益、风险统计按工作区（PAPER/LIVE）完全隔离，Agent 中心顶部切换 tab 看的是哪边的数据一目了然。</p></div>
+    <div class="faq"><b>转了 INJ 但积分没到账怎么办？</b><p>先确认转的是原生 INJ、转到的是页面显示的金库地址、发送方是你登录钱包对应的 Injective 地址；再等一下（链上确认需要时间）重新点「扫描到账」。多点几次不会重复入账，按 txhash 去重。</p></div>
+    <div class="faq"><b>实盘最多能亏多少？</b><p>单个实盘 Agent 资金上限硬顶 $2,000，这是代码里强制的 RiskGuard 限制，前端和后端都改不了。授权的 API Wallet 没有提币权限，即使私钥泄露对方也提不走本金，只能交易。</p></div>
+    <div class="faq"><b>为什么创建 Agent 后一直空仓？</b><p>正常——引擎只在「扣完成本后净APR为正」时才开仓。费率不够高的时候，Agent 会诚实地保持观望，日志里会写明当前不满足哪个门槛，不会为了有动作而硬开一个亏钱的仓位。</p></div>
+  </section>
+
+  <section id="checklist">
+    <h2 style="font-size:22px;font-weight:800;margin:20px 0 6px">🙋 需要你配合的动作 · 汇总</h2>
+    <table>
+      <tr><th>动作</th><th>在哪</th><th>为什么不能自动</th></tr>
+      <tr><td>钱包签名登录</td><td>右上角「连接钱包」</td><td>身份验证必须由你的私钥完成</td></tr>
+      <tr><td>转 INJ 到金库</td><td>设置 → INJ 积分</td><td>真实转账，只有你能操作自己的钱包</td></tr>
+      <tr><td>点「扫描到账」</td><td>设置 → INJ 积分</td><td>系统不轮询链上状态，需要你触发一次检查</td></tr>
+      <tr><td>Hyperliquid 账户入金 USDC</td><td>app.hyperliquid.xyz（站外）</td><td>实盘交易需要真实保证金，CarryPilot 不代持资金</td></tr>
+      <tr><td>EIP-712 签名授权 API Wallet</td><td>设置 → 交易授权</td><td>把「只能交易」的权限范围明确授予出去，必须你签名确认</td></tr>
+      <tr><td>积分耗尽后手动「启动」</td><td>Agent 中心</td><td>暂停后不会自动恢复，避免在你没注意时持续消耗</td></tr>
+      <tr><td>手动「平仓」（可选）</td><td>Agent 中心 / Agent 详情</td><td>默认交给 Agent 自动判断，你随时可以提前介入</td></tr>
+    </table>
+  </section>
+</div>
+<footer>
+  <svg width="16" height="16" style="vertical-align:-3px;margin-right:2px"><use href="#rabbit-icon"/></svg> CarryPilot · <a href="/">首页</a> · <a href="/agents">Agent 接入文档</a> · <a href="/app">进入 App</a>
+</footer>
+</body>
+</html>

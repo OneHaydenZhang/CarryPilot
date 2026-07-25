@@ -26,10 +26,16 @@ export function agentCard() {
       'AI 资金费率套利研究 Agent。查询 Hyperliquid 全市场资金费率现状与扣完成本后的套利机会（现货多+永续空，市场中性）。只出研究结论，不构成投资建议。',
     version: '0.6.0',
     provider: { organization: 'CarryPilot', url: BASE_URL || undefined },
-    url: BASE_URL ? `${BASE_URL}/api/agent/query` : '/api/agent/query',
+    url: BASE_URL ? `${BASE_URL}/api/a2a` : '/api/a2a',
+    preferredTransport: 'JSONRPC',
     capabilities: { streaming: false, pushNotifications: false },
     defaultInputModes: ['text/plain', 'application/json'],
     defaultOutputModes: ['application/json'],
+    additionalInterfaces: [
+      { url: BASE_URL ? `${BASE_URL}/api/a2a` : '/api/a2a', transport: 'JSONRPC' },
+      { url: BASE_URL ? `${BASE_URL}/mcp` : '/mcp', transport: 'MCP' },
+      { url: BASE_URL ? `${BASE_URL}/api/agent/query` : '/api/agent/query', transport: 'HTTP+JSON' },
+    ],
     skills: [
       {
         id: 'funding_rates',
@@ -57,14 +63,19 @@ export function agentCard() {
 
 type Intent = 'funding_rates' | 'arbitrage_opportunity' | 'unknown';
 
-const COINS_RE = /\b([A-Z]{2,10})\b/;
+const COINS_RE = /\b([A-Z]{2,10})\b/g;
 
-/** 极简意图识别：关键词 + 标的提取。够对话式查询用；复杂 NLU 由调用方 LLM 负责。 */
-export function classify(text: string): { intent: Intent; coin: string | null } {
+/**
+ * 极简意图识别：关键词 + 标的提取。够对话式查询用；复杂 NLU 由调用方 LLM 负责。
+ * `knownCoins` 传入时，只有真实存在的标的才会被当成 coin —— 否则任何被转大写后
+ * 恰好像 ticker 的英文单词（WHAT/ANY/RIGHT...）都会被误认成标的代码。
+ */
+export function classify(text: string, knownCoins?: readonly string[]): { intent: Intent; coin: string | null } {
   const t = text.toLowerCase();
   const raw = text.toUpperCase();
-  const coinMatch = raw.match(COINS_RE);
-  const coin = coinMatch && !['THE', 'NOW', 'BEST', 'AND', 'FOR'].includes(coinMatch[1]!) ? coinMatch[1]! : null;
+  const knownSet = knownCoins ? new Set(knownCoins) : null;
+  const matches = [...raw.matchAll(COINS_RE)].map((m) => m[1]!);
+  const coin = knownSet ? (matches.find((m) => knownSet.has(m)) ?? null) : (matches[0] ?? null);
   const arb = /套利|机会|carry|arbitrage|值得|做单|opportunit/.test(t);
   const rate = /费率|资费|funding|rate|年化|apr/.test(t);
   if (arb) return { intent: 'arbitrage_opportunity', coin };
@@ -118,6 +129,70 @@ export function answerOpportunities(candidates: Candidate[], coin: string | null
     intent: 'arbitrage_opportunity',
     accepted: accepted.slice(0, 5).map(slim),
     message: `当前 ${accepted.length} 个成本后为正的机会，最优：${accepted[0]!.asset}（净APR ${accepted[0]!.netApr.toFixed(1)}%）。`,
+  };
+}
+
+// ---------- A2A (Agent2Agent) JSON-RPC 2.0 ----------
+// 参考 A2A 协议 message/send：https://a2a-protocol.org/latest/specification/
+interface JsonRpcRequest {
+  jsonrpc?: string;
+  id?: string | number | null;
+  method?: string;
+  params?: { message?: { role?: string; parts?: { kind?: string; text?: string }[]; messageId?: string } };
+}
+
+function jsonRpcError(id: string | number | null, code: number, message: string) {
+  return { jsonrpc: '2.0', id: id ?? null, error: { code, message } };
+}
+
+/**
+ * 处理一次 A2A message/send 调用：把消息里的文本 part 丢给既有意图识别，
+ * 结果同时以人类可读文本 part 与结构化 data part 返回，机器/人都能消费。
+ */
+export function handleA2A(
+  body: Record<string, unknown>,
+  ctx: { rates: RateRow[]; candidates: Candidate[]; generatedAt: string },
+) {
+  const req = body as JsonRpcRequest;
+  const id = req.id ?? null;
+  if (req.jsonrpc !== '2.0') return jsonRpcError(id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
+  if (req.method === 'tasks/get' || req.method === 'tasks/cancel') {
+    // 本 Agent 所有调用同步完成，不保留任务状态；告知调用方无此任务
+    return jsonRpcError(id, -32001, 'Task not found: this agent completes tasks synchronously and does not persist task state');
+  }
+  if (req.method !== 'message/send') return jsonRpcError(id, -32601, `Method not found: ${req.method}`);
+
+  const textPart = req.params?.message?.parts?.find((p) => p.kind === 'text' || typeof p.text === 'string');
+  const text = textPart?.text?.trim();
+  if (!text) return jsonRpcError(id, -32602, 'Invalid params: message.parts must include a text part');
+
+  const { intent, coin } = classify(
+    text,
+    ctx.rates.map((r) => r.coin),
+  );
+  const answer =
+    intent === 'arbitrage_opportunity'
+      ? answerOpportunities(ctx.candidates, coin)
+      : intent === 'funding_rates'
+        ? answerRates(ctx.rates, coin)
+        : {
+            intent: 'unknown',
+            message: '我能回答两类问题：① 资金费率（如「BTC 费率多少」）② 套利机会（如「现在有什么套利机会」）。',
+            skills: ['funding_rates', 'arbitrage_opportunity'],
+          };
+
+  return {
+    jsonrpc: '2.0',
+    id,
+    result: {
+      kind: 'message',
+      role: 'agent',
+      messageId: crypto.randomUUID(),
+      parts: [
+        { kind: 'text', text: (answer as { message: string }).message },
+        { kind: 'data', data: { generatedAt: ctx.generatedAt, disclaimer: 'research only, not financial advice', ...answer } },
+      ],
+    },
   };
 }
 

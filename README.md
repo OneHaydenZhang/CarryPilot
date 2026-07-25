@@ -11,6 +11,9 @@
 [![Platform](https://img.shields.io/badge/🛰️_Multi--Agent-Arbitrage_Platform-a78bfa?style=for-the-badge)](#)
 [![Chain](https://img.shields.io/badge/Hyperliquid-🌊-4d9fff?style=for-the-badge)](https://hyperliquid.xyz)
 [![Injective](https://img.shields.io/badge/Injective-🥷-a78bfa?style=for-the-badge)](https://injective.com)
+[![A2A](https://img.shields.io/badge/A2A-JSON--RPC-4d9fff?style=for-the-badge)](#-callable-agent--agent%E5%8F%AF%E8%B0%83%E7%94%A8%E6%9C%8D%E5%8A%A1)
+[![MCP](https://img.shields.io/badge/MCP-Streamable_HTTP-2ee6a8?style=for-the-badge)](#-callable-agent--agent%E5%8F%AF%E8%B0%83%E7%94%A8%E6%9C%8D%E5%8A%A1)
+[![x402](https://img.shields.io/badge/x402-pay_per_call-ffb454?style=for-the-badge)](#-callable-agent--agent%E5%8F%AF%E8%B0%83%E7%94%A8%E6%9C%8D%E5%8A%A1)
 [![Hackathon](https://img.shields.io/badge/AdventureX-2026-ffb454?style=for-the-badge)](#)
 
 **中文** · [English](#-english)
@@ -119,6 +122,34 @@ flowchart LR
 
 ---
 
+## 🔌 Callable Agent · Agent可调用服务
+
+CarryPilot 面向**两种受众**：
+
+| | 人类用户 | 其他 AI Agent / 开发者 |
+|---|---|---|
+| 拿到什么 | 自主运营的套利 Agent（虚拟盘/实盘）、5 大中心可视化 | 免费只读研究查询 + 付费完整报告，接进自己的 agent/流水线 |
+| 怎么用 | 连钱包 → [`/app`](#-快速开始--quickstart) | [Agent Card](#) 发现 → HTTP / A2A / MCP 三选一 |
+| 底层 | 同一套确定性引擎（成本瀑布 · 净APR · 拒绝码） | 同一套确定性引擎，包了三层协议信封 |
+
+两边共用**同一个确定性引擎**——UI 上看到的费率/机会，和 API 返回给别的 agent 的，是同一份计算结果，不是两套逻辑各说各话。
+
+**三种免费接入方式**（只读、免鉴权）：
+
+| 协议 | 端点 | 适合 |
+|---|---|---|
+| **HTTP+JSON** | `GET/POST /api/agent/query` | 最简单，一条 curl 就能问 |
+| **A2A**（JSON-RPC 2.0 `message/send`） | `POST /api/a2a` | 已经在用 [A2A 协议](https://a2a-protocol.org) 生态的 agent host |
+| **MCP**（Streamable HTTP，无状态） | `POST /mcp` | Claude / Codex 等支持 MCP 的 host，配个 URL 就行 |
+
+发现入口：`GET /.well-known/agent-card.json`（身份/技能/约束/三种接入点，标准 [Agent Card](https://a2a-protocol.org)）。
+
+**付费拿完整报告**：`GET /api/agent/report` 走 [x402](https://x402.org) 协议收 USDC（Injective testnet，EIP-3009 免 gas 签名支付）——无支付返回 HTTP 402 + 报价，agent 自己签名重放即结算，全程无需人工介入，拿到全市场完整数据（免费端点只给摘要）。
+
+📖 **完整接入文档（含请求/响应示例、错误码、x402 全流程代码）**：部署后访问 `/agents`，或看 `src/web/agent-docs.html`。
+
+---
+
 ## 🥷 Injective 结合与经济模型 · Economics
 
 Injective 不是装饰性的「上链」叙事，而是 CarryPilot 的**身份、燃料与信任层**：
@@ -169,15 +200,21 @@ flowchart TD
 ### 🔧 技术版本 · Technical
 
 ```
-Node.js 22 + TypeScript (strict)  ·  零重框架、单进程 orchestrator
+Node.js 22 + TypeScript (strict)  ·  零重框架、单进程 orchestrator（原生 http server 为主路由；仅 x402 付费路由挂了一个单路由 Express 子 app）
 ├─ src/connectors/   HL Info/Exchange API · Injective LCD · HL 实盘 SDK
 ├─ src/core/         candidates(引擎) · agents(回合决策) · risk · llm · points · store
 ├─ src/web/          零依赖 HTTP server + 单文件前端（明暗主题/中英文/移动端）
-└─ scripts/          acceptance.ts 端到端验收（22 用例）
+│  ├─ agentApi.ts    Agent Card + 意图识别 + A2A message/send（JSON-RPC 2.0）
+│  ├─ mcpServer.ts   MCP server（@modelcontextprotocol/sdk，Streamable HTTP，无状态）
+│  ├─ reportApp.ts   x402 付费报告（@injectivelabs/x402，EIP-3009 gasless USDC）
+│  └─ agent-docs.html  对外接入文档（/agents）
+└─ scripts/          acceptance.ts 端到端验收（22 用例）· x402-spike/x402-settle-demo
+
 ```
 
 - **LLM**：经统一网关（对外仅显示模型家族名，如 DeepSeek），内置风控 system prompt（不得建议加杠杆/改数值/风控优先）+ 结构化偏好模板 + 复盘记忆上下文
 - **钱包**：EIP-6963 多钱包可视化选择 + 移动端深链跳转（钱包 App 内置浏览器打开）；EIP-712 签名登录 + ApproveAgent 授权（HMAC session）
+- **Agent 协议**：A2A（标准 JSON-RPC 2.0，手写协议层，无额外依赖）· MCP（官方 SDK，Streamable HTTP 无状态：每请求现建 server+transport）· x402（Injective 官方 SDK，EIP-3009 免 gas 签名支付）
 - **部署**：云 VM + systemd，公网 mainnet；一键 `git pull && systemctl restart`；配套端到端验收（22 用例）
 
 ---
@@ -224,7 +261,9 @@ BASE_URL=http://localhost:8080 npx tsx scripts/acceptance.ts   # 22 项端到端
 
 **Key principle**: AI only judges and explains; all numbers and orders come from deterministic code. LLM output is always *advice* — position/limit/stop are enforced by RiskGuard.
 
-**Tech**: Node 22 + TypeScript, zero heavy frameworks, single-process orchestrator. LLM via OpenRouter (model family name only shown). Multi-wallet (EIP-6963) + mobile deep-links. Deployed on GCP mainnet.
+**Also a callable agent**: the same deterministic engine is exposed to *other* AI agents, free and read-only, over three protocols — plain HTTP+JSON (`/api/agent/query`), A2A (JSON-RPC 2.0 `message/send` at `/api/a2a`), and MCP (Streamable HTTP at `/mcp`, two tools: `get_funding_rates`, `find_arbitrage`). Discovery starts at `/.well-known/agent-card.json`. A paid full-report endpoint (`/api/agent/report`) settles via [x402](https://x402.org) — gasless EIP-3009 USDC on Injective testnet, no human in the loop. Full docs with request/response examples at `/agents`.
+
+**Tech**: Node 22 + TypeScript, zero heavy frameworks, single-process orchestrator. LLM via a unified gateway (only the model family name, e.g. DeepSeek, is ever shown). Multi-wallet (EIP-6963) + mobile deep-links. Deployed on mainnet.
 
 Deployed on mainnet — demo link available with the submission / on request.
 

@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
 <title>CarryPilot — AI 资金费率套利 Agent</title>
 <style>
   :root{--bg:#070b11;--panel:#10161f;--panel2:#151d29;--border:#222c3a;--text:#e9eef5;--dim:#8797a8;
@@ -34,7 +36,11 @@
   .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
   .reveal.in{opacity:1;transform:none}
   @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.orb,body::before,body::after{animation:none}}
-  nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;flex-wrap:wrap;gap:10px}
+  nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;flex-wrap:wrap;gap:14px}
+  .navlinks{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .navlinks a.nl{color:var(--dim);text-decoration:none;font-size:14px;font-weight:500;transition:.15s}
+  .navlinks a.nl:hover{color:var(--text)}
+  @media(max-width:640px){.navlinks{gap:14px;order:3;flex:1 0 100%;padding-top:2px}.navlinks a.nl{font-size:13px}}
   .logo{font-size:19px;font-weight:800}.logo span{color:var(--green)}
   .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:13px 30px;border-radius:12px;text-decoration:none;border:none;font-size:15px;cursor:pointer;transition:.2s}
   .btn:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(46,230,168,.25)}
@@ -69,6 +75,8 @@
   .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;transition:.2s}
   .card:hover{border-color:var(--blue);transform:translateY(-2px)}
   .card h3{font-size:16px;margin-bottom:8px}.card p{color:var(--dim);font-size:14px}
+  .code{background:#0a0f16;border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px;font:12.5px/1.7 "SF Mono",Menlo,Consolas,monospace;color:#9be3c8;white-space:pre-wrap;word-break:break-all;overflow-x:auto}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;color:var(--blue);font-size:.92em}
   .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
   .why .w{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px}
   .why .w .ic{font-size:26px;margin-bottom:10px}
@@ -127,11 +135,29 @@
 </style>
 </head>
 <body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="rabbit-icon" viewBox="0 0 64 64">
+  <defs><linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2ee6a8"/><stop offset="100%" stop-color="#1bc4ff"/></linearGradient></defs>
+  <rect x="16" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(-12 21.5 20)"/>
+  <rect x="37" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(12 42.5 20)"/>
+  <rect x="19.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(-12 21.5 20)"/>
+  <rect x="40.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(12 42.5 20)"/>
+  <circle cx="32" cy="41" r="19" fill="url(#rgrad)"/>
+  <circle cx="25.5" cy="38" r="2.5" fill="#04121c"/>
+  <circle cx="38.5" cy="38" r="2.5" fill="#04121c"/>
+  <path d="M29 46c1.2 1.3 3.8 1.3 5 0" stroke="#04121c" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="32" cy="43.3" rx="1.7" ry="1.2" fill="#04121c"/>
+</symbol></svg>
+
 <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
 <div class="wrap">
   <nav>
-    <div class="logo">🛩️ Carry<span>Pilot</span></div>
-    <div><a class="btn ghost" href="https://github.com/OneHaydenZhang/CarryPilot" style="margin-right:10px">GitHub</a><a class="btn" href="/app">Launch App</a></div>
+    <div class="logo"><svg width="24" height="24" style="vertical-align:-7px;margin-right:2px"><use href="#rabbit-icon"/></svg> Carry<span>Pilot</span></div>
+    <div class="navlinks">
+      <a class="nl" href="/guide">使用指南</a>
+      <a class="nl" href="/agents">Agent Docs</a>
+      <a class="nl" href="https://github.com/OneHaydenZhang/CarryPilot">GitHub</a>
+      <a class="btn" href="/app">Launch App</a>
+    </div>
   </nav>
 
   <div class="hero">
@@ -153,6 +179,22 @@
       <span><span class="mark">🥷</span>Injective</span>
       <span><span class="mark">🦊</span>MetaMask · OKX · Rabby</span>
       <span><span class="mark">🐋</span>DeepSeek AI</span>
+    </div>
+  </div>
+
+  <div class="grid reveal" style="margin-top:36px">
+    <div class="card" style="border-color:rgba(46,230,168,.35)">
+      <h3>👤 我是普通用户</h3>
+      <p>连接钱包，创建自动运营的套利 Agent（虚拟盘先体验，实盘用无提币权限的 API Wallet）。5 大中心看清费率、机会、收益与风险。</p>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <a class="btn" style="padding:10px 22px;font-size:14px" href="/app">进入 App →</a>
+        <a href="/guide" style="font-size:13px;color:var(--dim)">先看使用指南 →</a>
+      </div>
+    </div>
+    <div class="card" style="border-color:rgba(77,159,255,.35)">
+      <h3>🤖 我是另一个 AI Agent / 开发者</h3>
+      <p>CarryPilot 本身也是一个可被调用的研究服务：HTTP / A2A / MCP 三种协议免费查询，x402 按次付费拿完整报告。</p>
+      <a class="btn ghost" style="margin-top:12px;padding:10px 22px;font-size:14px" href="/agents">看接入文档 →</a>
     </div>
   </div>
 
@@ -286,15 +328,55 @@
     <div class="card"><h3>⚙️ 设置</h3><p>钱包信息、INJ 积分充值（Agent 燃料）、实盘交易授权（API Wallet 只能交易不能提币）。</p></div>
   </div>
 
+  <h2 class="sec reveal">🔌 把 CarryPilot 当 Agent 调用</h2>
+  <p class="sub reveal">研究能力（费率现状 / 套利机会）对外免鉴权只读开放。三种接入方式，选你的 harness 支持的那种 · <a href="/agents" style="color:var(--green);font-weight:700">完整接入文档 + 错误码 + x402 全流程 →</a></p>
+  <div class="grid reveal">
+    <div class="card">
+      <h3>① HTTP（最简单）</h3>
+      <p>意图识别 + 结构化 JSON，一条 curl 就能问。</p>
+      <pre class="code">curl "<span class="origin"></span>/api/agent/query?q=BTC资金费率"</pre>
+    </div>
+    <div class="card">
+      <h3>② A2A（Agent2Agent 协议）</h3>
+      <p>标准 <code>message/send</code> JSON-RPC 2.0。先拉 Agent Card 发现技能，再调用。</p>
+      <pre class="code">curl <span class="origin"></span>/.well-known/agent-card.json
+
+curl -X POST <span class="origin"></span>/api/a2a \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"message/send",
+       "params":{"message":{"role":"user",
+       "parts":[{"kind":"text","text":"现在有什么套利机会"}]}}}'</pre>
+    </div>
+    <div class="card">
+      <h3>③ MCP（Model Context Protocol）</h3>
+      <p>Streamable HTTP，无状态。暴露 <code>get_funding_rates</code>、<code>find_arbitrage</code> 两个 tool，接入你的 Claude / Codex 等 MCP host。</p>
+      <pre class="code">{
+  "mcpServers": {
+    "carrypilot": { "url": "<span class="origin"></span>/mcp" }
+  }
+}</pre>
+    </div>
+  </div>
+  <div class="panel reveal" style="margin-top:16px">
+    <h3 style="margin-bottom:8px">💳 x402：按次付费拿完整报告（Injective testnet）</h3>
+    <p style="color:var(--dim);font-size:13.5px;line-height:1.8">
+      以上三种接入的免费部分只出研究结论摘要。<code>GET /api/agent/report</code> 是已上线的付费端点，走
+      <a href="https://x402.org" target="_blank" rel="noopener" style="color:var(--blue)">x402</a> 协议收 USDC（Injective testnet，EIP-3009 免 gas 签名支付）：
+      无支付请求返回 <b>HTTP 402</b> + 报价（asset / amount / payTo），Agent 用支持 x402 的 client 自动签名重放即结算，全程无需人工介入，拿到全市场完整数据（免费端点只给摘要）。
+      完整流程 + 代码示例见 <a href="/agents#x402" style="color:var(--blue)">接入文档</a>。
+    </p>
+  </div>
+
   <footer>
     ⚠ 本平台输出为研究结论与模拟/实盘执行记录，不构成投资建议或收益承诺。示例数字为机制说明用的假设，实际费率随市场波动。实盘请仅使用可承受损失的资金。<br><br>
-    🛩️ CarryPilot · Hyperliquid 站内资金费率套利 · Injective 积分与链上证据 · AdventureX 2026
+    <svg width="16" height="16" style="vertical-align:-3px;margin-right:2px"><use href="#rabbit-icon"/></svg> CarryPilot · Hyperliquid 站内资金费率套利 · Injective 积分与链上证据 · AdventureX 2026
   </footer>
 </div>
 <script>
   // 滚动揭示
   const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.querySelectorAll('.origin').forEach(el=>el.textContent=location.origin);
   // hero 实时扫描数：拉一次真实机会数，动态呈现平台在干活
   fetch('/api/scan').then(r=>r.json()).then(d=>{
     const total=(d.rates||[]).length, acc=(d.candidates||[]).filter(c=>c.decision==='ACCEPTED').length;

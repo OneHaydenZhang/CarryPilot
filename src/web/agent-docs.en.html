@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<title>Agent Integration Docs — CarryPilot</title>
+<style>
+  :root{--bg:#070b11;--panel:#10161f;--panel2:#151d29;--border:#222c3a;--text:#e9eef5;--dim:#8797a8;
+        --green:#2ee6a8;--blue:#4d9fff;--amber:#ffb454;--red:#ff5d6c;--purple:#a78bfa;}
+  *{box-sizing:border-box;margin:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font:15px/1.75 "Inter",-apple-system,sans-serif}
+  a{color:var(--blue)}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;color:var(--blue);font-size:.9em;background:rgba(77,159,255,.08);padding:1px 6px;border-radius:5px}
+  .code{background:#0a0f16;border:1px solid var(--border);border-radius:10px;padding:16px;margin:12px 0;font:12.5px/1.7 "SF Mono",Menlo,Consolas,monospace;color:#9be3c8;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+  .code .c{color:var(--dim)}
+  nav{position:sticky;top:0;z-index:10;background:rgba(7,11,17,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;padding:16px 28px}
+  .logo{font-size:18px;font-weight:800}.logo span{color:var(--green)}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:9px 20px;border-radius:10px;text-decoration:none;font-size:14px}
+  .btn.ghost{background:none;border:1px solid var(--border);color:var(--text);margin-right:8px}
+  .layout{display:flex;gap:40px;align-items:flex-start;max-width:1040px;margin:0 auto;padding:0 28px}
+  .shell{flex:1;min-width:0;max-width:720px;padding:0 0 100px}
+  .sidebar{width:190px;flex:0 0 190px;position:sticky;top:80px;font-size:13.5px;max-height:calc(100vh - 100px);overflow-y:auto}
+  .sidebar .stitle{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px}
+  .sidebar a{display:block;padding:7px 0 7px 14px;color:var(--dim);text-decoration:none;border-left:2px solid var(--border);transition:.15s}
+  .sidebar a:hover{color:var(--text);border-left-color:var(--dim)}
+  .sidebar a.active{color:var(--green);border-left-color:var(--green);font-weight:700}
+  @media(max-width:900px){.sidebar{display:none}}
+  @media(min-width:901px){.toc{display:none}}
+  .hero{padding:56px 0 20px}
+  .hero .tag{color:var(--purple);font-size:12px;font-weight:800;letter-spacing:.06em;padding:5px 14px;border:1px solid rgba(167,139,250,.4);border-radius:20px;background:rgba(167,139,250,.08);display:inline-block;margin-bottom:16px}
+  .hero h1{font-size:38px;font-weight:800;letter-spacing:-1px;margin-bottom:14px}
+  .hero p{color:var(--dim);font-size:16px;max-width:680px}
+  .toc{display:flex;gap:8px;flex-wrap:wrap;margin:26px 0 10px;padding-bottom:26px;border-bottom:1px solid var(--border)}
+  .toc a{color:var(--dim);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;text-decoration:none}
+  .toc a:hover{color:var(--text);border-color:var(--green)}
+  section{padding:46px 0;border-bottom:1px solid var(--border)}
+  section:last-child{border-bottom:none}
+  h2{font-size:24px;font-weight:800;margin-bottom:6px;scroll-margin-top:70px}
+  h2 .n{color:var(--green);font-size:14px;font-weight:800;margin-right:8px}
+  .lead{color:var(--dim);margin-bottom:22px;max-width:680px}
+  h3{font-size:16px;font-weight:700;margin:22px 0 8px}
+  p{margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700}
+  .pill.get{background:rgba(46,230,168,.14);color:var(--green)}
+  .pill.post{background:rgba(77,159,255,.14);color:var(--blue)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;margin:14px 0}
+  .card b{display:block;margin-bottom:4px}
+  .warn{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#ffd9a0;margin:14px 0}
+  .ok{background:rgba(46,230,168,.08);border:1px solid rgba(46,230,168,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#a8f0d8;margin:14px 0}
+  footer{color:var(--dim);font-size:13px;padding:30px 28px;text-align:center}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="rabbit-icon" viewBox="0 0 64 64">
+  <defs><linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2ee6a8"/><stop offset="100%" stop-color="#1bc4ff"/></linearGradient></defs>
+  <rect x="16" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(-12 21.5 20)"/>
+  <rect x="37" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(12 42.5 20)"/>
+  <rect x="19.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(-12 21.5 20)"/>
+  <rect x="40.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(12 42.5 20)"/>
+  <circle cx="32" cy="41" r="19" fill="url(#rgrad)"/>
+  <circle cx="25.5" cy="38" r="2.5" fill="#04121c"/>
+  <circle cx="38.5" cy="38" r="2.5" fill="#04121c"/>
+  <path d="M29 46c1.2 1.3 3.8 1.3 5 0" stroke="#04121c" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="32" cy="43.3" rx="1.7" ry="1.2" fill="#04121c"/>
+</symbol></svg>
+
+<nav>
+  <div class="logo"><svg width="24" height="24" style="vertical-align:-7px;margin-right:2px"><use href="#rabbit-icon"/></svg> Carry<span>Pilot</span> <span style="color:var(--dim);font-weight:400;font-size:13px">/ Agent Docs</span></div>
+  <div><a class="btn ghost" href="/agents">中文</a><a class="btn ghost" href="/">← Home</a><a class="btn" href="/app">Launch App</a></div>
+</nav>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <div class="stitle">Contents</div>
+  <a href="#card">① Agent Card</a>
+  <a href="#http">② HTTP</a>
+  <a href="#a2a">③ A2A</a>
+  <a href="#mcp">④ MCP</a>
+  <a href="#x402">⑤ x402 payments</a>
+  <a href="#errors">⑥ Error codes</a>
+  <a href="#limits">⑦ Limits & disclaimer</a>
+</aside>
+<div class="shell">
+  <div class="hero">
+    <span class="tag">FOR AI AGENTS & DEVELOPERS</span>
+    <h1>Wire CarryPilot into your agent</h1>
+    <p>CarryPilot is a trading platform for humans, but it's also a <b>research service other AI agents can call</b>: current Hyperliquid funding rates, and market-neutral arbitrage opportunities net of every cost. The free tier is read-only, no auth required; the full report is metered via <a href="#x402">x402</a>. Pick whichever of the three protocols fits your stack.</p>
+  </div>
+
+  <div class="toc">
+    <a href="#card">① Agent Card</a>
+    <a href="#http">② HTTP</a>
+    <a href="#a2a">③ A2A</a>
+    <a href="#mcp">④ MCP</a>
+    <a href="#x402">⑤ x402 payments</a>
+    <a href="#errors">⑥ Error codes</a>
+    <a href="#limits">⑦ Limits & disclaimer</a>
+  </div>
+
+  <section id="card">
+    <h2><span class="n">①</span>Agent Card (discovery)</h2>
+    <p class="lead">Any caller's first step should be fetching this file — a machine-readable "business card": identity, skills, constraints, and the entry point for each of the three protocols below.</p>
+    <span class="pill get">GET</span> <code>/.well-known/agent-card.json</code>
+    <div class="code">{
+  "protocolVersion": "0.2",
+  "name": "CarryPilot",
+  "description": "AI funding-rate arbitrage research agent...",
+  "url": "/api/a2a",
+  "preferredTransport": "JSONRPC",
+  "additionalInterfaces": [
+    { "url": "/api/a2a", "transport": "JSONRPC" },
+    { "url": "/mcp", "transport": "MCP" },
+    { "url": "/api/agent/query", "transport": "HTTP+JSON" }
+  ],
+  "skills": [
+    { "id": "funding_rates", "name": "Funding rate lookup", "examples": ["BTC funding rate now", "which coins have the highest funding"] },
+    { "id": "arbitrage_opportunity", "name": "Arbitrage opportunity lookup", "examples": ["any arbitrage opportunities right now", "is BTC worth arbitraging"] }
+  ],
+  "constraints": { "venues": ["hyperliquid"], "strategy": "S1_SPOT_PERP", "readOnly": true },
+  "payments": { "protocol": "x402", "asset": "USDC", "network": "injective-testnet", "endpoint": "/api/agent/report" }
+}</div>
+    <p>Both skills sit on top of the same deterministic engine: real net APR after fees + slippage + a funding-drift reserve, never the gross rate. When there's no opportunity it says so honestly instead of manufacturing one for the sake of an answer.</p>
+  </section>
+
+  <section id="http">
+    <h2><span class="n">②</span>HTTP (simplest, good for a quick poke)</h2>
+    <p class="lead">One sentence in, one JSON object out. No protocol overhead — fine for scripts, curl, or wrapping inside your own agent.</p>
+    <span class="pill get">GET</span> <code>/api/agent/query?q=&lt;text&gt;</code> &nbsp; or &nbsp; <span class="pill post">POST</span> <code>/api/agent/query</code> <code>{"query":"..."}</code>
+    <div class="code">curl "<span class="origin"></span>/api/agent/query?q=BTC%20funding%20rate"</div>
+    <div class="code">{
+  "query": "BTC funding rate",
+  "coin": "BTC",
+  "generatedAt": "2026-07-25T03:32:48.582Z",
+  "disclaimer": "...",
+  "intent": "funding_rates",
+  "found": true,
+  "hourlyFundingPct": 0.00086329,
+  "annualizedPct": 7.5624204,
+  "hasSpot": true,
+  "message": "BTC funding rate is currently 0.00086%/h (~7.6% annualized), longs pay shorts. Spot market exists — can be hedged into an on-venue carry."
+}</div>
+    <p>Arbitrage-opportunity queries hit the same endpoint, just phrase it differently: <code>?q=any arbitrage opportunities right now</code> or <code>?q=is BTC worth it</code>.</p>
+  </section>
+
+  <section id="a2a">
+    <h2><span class="n">③</span>A2A (Agent2Agent protocol)</h2>
+    <p class="lead">Standard <a href="https://a2a-protocol.org" target="_blank" rel="noopener">A2A</a> JSON-RPC 2.0, <code>message/send</code> method. Fits a host that's already in the A2A ecosystem (agent-card discovery + multi-agent orchestration).</p>
+    <span class="pill post">POST</span> <code>/api/a2a</code>
+    <div class="code">curl -X POST <span class="origin"></span>/api/a2a \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "message/send",
+    "params": {
+      "message": {
+        "role": "user",
+        "parts": [{ "kind": "text", "text": "any arbitrage opportunities right now" }]
+      }
+    }
+  }'</div>
+    <p>The <code>result</code> is a <code>role: "agent"</code> message with two parts: <code>text</code> (a human-readable sentence) + <code>data</code> (structured fields for your code to parse).</p>
+    <div class="code">{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "kind": "message",
+    "role": "agent",
+    "messageId": "...",
+    "parts": [
+      { "kind": "text", "text": "No opportunity clears costs across the whole market right now — ..." },
+      { "kind": "data", "data": { "intent": "arbitrage_opportunity", "accepted": [], "...": "..." } }
+    ]
+  }
+}</div>
+    <p>Every call on this agent completes synchronously — no long-running task state is kept. <code>tasks/get</code> / <code>tasks/cancel</code> return <code>-32001</code>.</p>
+  </section>
+
+  <section id="mcp">
+    <h2><span class="n">④</span>MCP (Model Context Protocol)</h2>
+    <p class="lead">Streamable HTTP, stateless. If your agent host is Claude / Codex / anything else with MCP support, this is the path of least resistance — no HTTP client to write, just point a URL.</p>
+    <div class="code">{
+  "mcpServers": {
+    "carrypilot": { "url": "<span class="origin"></span>/mcp" }
+  }
+}</div>
+    <h3>Exposed tools</h3>
+    <table>
+      <tr><th>Tool</th><th>Args</th><th>Description</th></tr>
+      <tr><td><code>get_funding_rates</code></td><td><code>coin?: string</code></td><td>Current funding rate / annualized / hedgeable for one coin (or the highest-|rate| coins market-wide)</td></tr>
+      <tr><td><code>find_arbitrage</code></td><td><code>coin?: string</code></td><td>Market-neutral carry candidates after full costs: net APR, cost coverage, rejection reasons</td></tr>
+    </table>
+    <p>Test it directly with the official SDK:</p>
+    <div class="code"><span class="c">// npm i @modelcontextprotocol/sdk</span>
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+
+const client = new Client({ name: "my-agent", version: "1.0.0" });
+await client.connect(new StreamableHTTPClientTransport(new URL("<span class="origin"></span>/mcp")));
+
+const { tools } = await client.listTools();
+const result = await client.callTool({ name: "find_arbitrage", arguments: {} });</div>
+  </section>
+
+  <section id="x402">
+    <h2><span class="n">⑤</span>x402: pay-per-call for the full report</h2>
+    <p class="lead">The three free entry points only answer "the one thing you asked." The full report (every market-wide candidate + the whole rate table, not a summary) is metered in USDC via <a href="https://x402.org" target="_blank" rel="noopener">x402</a> — HTTP 402 kicks it off, on-chain <code>EIP-3009</code> gasless signed payment settles it, no human in the loop. An AI agent can pay for its own data.</p>
+    <span class="pill get">GET</span> <code>/api/agent/report</code>
+    <span class="warn">Current status: Injective <b>testnet</b>. The 402 quote handshake + EIP-3009 signing + balance verification are all confirmed working end-to-end; on-chain settlement (the last step, pending the payer test wallet being funded) is being verified — this line will be updated once it's confirmed</span>
+
+    <h3>Step 1: request with no payment → get a 402 quote</h3>
+    <div class="code">curl <span class="origin"></span>/api/agent/report</div>
+    <div class="code">HTTP/1.1 402 Payment Required
+PAYMENT-REQUIRED: &lt;base64, same JSON as below&gt;
+
+{
+  "x402Version": 2,
+  "resource": { "url": ".../api/agent/report", "description": "CarryPilot full arbitrage report" },
+  "accepts": [{
+    "scheme": "exact",
+    "network": "eip155:1439",
+    "amount": "10000",
+    "asset": "0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d",
+    "payTo": "0x402e6cB590137156eA549D4b7eDa9231C70A2c98",
+    "maxTimeoutSeconds": 120,
+    "extra": { "name": "USDC", "version": "2", "assetTransferMethod": "eip3009" }
+  }]
+}</div>
+    <p><code>amount: "10000"</code> = 0.01 USDC (6 decimals). <code>network: eip155:1439</code> is Injective EVM Testnet.</p>
+
+    <h3>Step 2: sign an EIP-3009 <code>transferWithAuthorization</code> against the quote, then replay</h3>
+    <p>Hand-rolling the signature (EIP-712 typed data) is fiddly — we recommend the official client (this is also how we test it):</p>
+    <div class="code"><span class="c">// npm i @injectivelabs/x402 viem</span>
+import { createInjectiveClient } from "@injectivelabs/x402/client";
+
+const client = createInjectiveClient({ privateKey: YOUR_PAYER_PRIVATE_KEY });
+const res = await client.fetch("<span class="origin"></span>/api/agent/report");
+<span class="c">// res.status === 200, body is the full report</span>
+const receipt = JSON.parse(atob(res.headers.get("payment-response")));
+<span class="c">// receipt.transaction is the on-chain settlement tx hash</span></div>
+    <p>What the client does under the hood: parse <code>accepts</code> from the 402 → build EIP-712 typed data → sign with your private key (off-chain, no gas) → retry the request with the signature in a <code>PAYMENT-SIGNATURE</code> header → the server's facilitator verifies signature/balance/nonce → submits on-chain settlement → you get 200 + full data + a settlement receipt.</p>
+
+    <h3>No SDK? Roll it by hand</h3>
+    <p>The header is <code>PAYMENT-SIGNATURE</code> (current) or <code>X-PAYMENT</code> (legacy-compatible), base64-encoded <code>PaymentPayload</code> (scheme/network/payload.authorization + payload.signature). The EIP-712 domain belongs to the USDC contract itself (name "USDC", version "2"); the signed object is a standard EIP-3009 <code>TransferWithAuthorization</code> (from/to/value/validAfter/validBefore/nonce).</p>
+
+    <h3>Testnet parameters</h3>
+    <table>
+      <tr><th></th><th>Value</th></tr>
+      <tr><td>Chain ID</td><td><code>1439</code> (<code>eip155:1439</code>)</td></tr>
+      <tr><td>RPC</td><td><code>https://k8s.testnet.json-rpc.injective.network</code></td></tr>
+      <tr><td>USDC contract</td><td><code>0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d</code> (Circle FiatTokenV2_2, EIP-3009 capable)</td></tr>
+      <tr><td>Testnet USDC faucet</td><td><a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com</a> (select Injective Testnet)</td></tr>
+      <tr><td>Testnet INJ faucet (gas, only needed if you self-host a facilitator)</td><td><a href="https://testnet.faucet.injective.network" target="_blank" rel="noopener">testnet.faucet.injective.network</a></td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--dim)">Source reference: <code>scripts/x402-spike.ts</code> (feasibility spike), <code>scripts/x402-settle-demo.ts</code> (real-payment settlement demo, prints the on-chain tx hash).</p>
+  </section>
+
+  <section id="errors">
+    <h2><span class="n">⑥</span>Error codes</h2>
+    <h3>A2A (standard JSON-RPC 2.0 codes)</h3>
+    <table>
+      <tr><th>code</th><th>meaning</th><th>trigger</th></tr>
+      <tr><td><code>-32700</code></td><td>Parse error</td><td>request body isn't valid JSON</td></tr>
+      <tr><td><code>-32600</code></td><td>Invalid Request</td><td><code>jsonrpc</code> field isn't <code>"2.0"</code></td></tr>
+      <tr><td><code>-32601</code></td><td>Method not found</td><td>method isn't <code>message/send</code></td></tr>
+      <tr><td><code>-32602</code></td><td>Invalid params</td><td>no text part inside <code>message.parts</code></td></tr>
+      <tr><td><code>-32001</code></td><td>Task not found</td><td><code>tasks/get</code>/<code>tasks/cancel</code> called — this agent completes synchronously and keeps no task state</td></tr>
+    </table>
+    <h3>x402</h3>
+    <table>
+      <tr><th>HTTP</th><th>meaning</th></tr>
+      <tr><td><code>402</code> + <code>insufficient_funds</code></td><td>payer wallet's USDC balance is too low</td></tr>
+      <tr><td><code>402</code> + <code>Payment network not accepted</code></td><td>signed network/asset doesn't match the quote</td></tr>
+      <tr><td><code>501</code></td><td>this deployment has x402 disabled (treasury/facilitator key missing)</td></tr>
+    </table>
+  </section>
+
+  <section id="limits">
+    <h2><span class="n">⑦</span>Limits & disclaimer</h2>
+    <div class="warn">⚠ Everything here is a research finding, not investment advice or a return guarantee. Funding rates move fast; free-tier data is cached for 60 seconds.</div>
+    <ul style="padding-left:20px;color:var(--dim)">
+      <li>Covers only the Hyperliquid on-venue strategy (long spot + short perp, market-neutral) — no cross-exchange arbitrage</li>
+      <li>Read-only: nothing in this document places an order or touches funds. Order placement needs a wallet-signed session and lives in the human-facing <a href="/app">App</a>; it isn't exposed to agents</li>
+      <li>Keep request rates reasonable; for production integrations, cache answers locally — abusive traffic will be restricted</li>
+    </ul>
+  </section>
+</div>
+</div>
+<footer>
+  <svg width="16" height="16" style="vertical-align:-3px;margin-right:2px"><use href="#rabbit-icon"/></svg> CarryPilot · <a href="https://github.com/OneHaydenZhang/CarryPilot" target="_blank" rel="noopener">GitHub</a> · <a href="/">Home</a> · <a href="/app">App</a>
+</footer>
+<script>
+document.querySelectorAll('.origin').forEach(el=>el.textContent=location.origin);
+const sideLinks=[...document.querySelectorAll('.sidebar a')];
+if(sideLinks.length){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting)sideLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id))});
+  },{rootMargin:'-15% 0px -75% 0px'});
+  document.querySelectorAll('section[id]').forEach(s=>io.observe(s));
+}
+</script>
+</body>
+</html>
