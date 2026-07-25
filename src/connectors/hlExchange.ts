@@ -17,8 +17,15 @@ const isTestnet = config.network === 'testnet';
 const transport = new hl.HttpTransport({ isTestnet });
 const infoClient = new hl.InfoClient({ transport });
 
-const AGENT_NAME_PREFIX = 'carrypilot';
+const AGENT_NAME_PREFIX = 'cpilot';
 const LIVE_SLIPPAGE = 0.005; // 双腿 IOC 限价保护 0.5%
+/**
+ * HL 的 EIP-712 domain.chainId 固定绑定 Arbitrum（跟用户钱包当前连的网络无关，
+ * MetaMask 对 typed data 签名不要求钱包实际处于该链）：mainnet=0xa4b1（Arbitrum One），
+ * testnet=0x66eee（Arbitrum Sepolia）。用钱包自己的 chainId 会导致签名校验失败。
+ * 参考 @nktkas/hyperliquid signUserSignedAction 官方示例。
+ */
+const HL_SIGNATURE_CHAIN_ID = isTestnet ? '0x66eee' : '0xa4b1';
 
 export function getOrCreateAgentWallet(owner: string): UserWalletRecord {
   let w = store.wallets.find((x) => x.owner === owner);
@@ -32,20 +39,20 @@ export function getOrCreateAgentWallet(owner: string): UserWalletRecord {
 }
 
 /** 生成给 MetaMask 的 ApproveAgent EIP-712 payload（用户主钱包签名） */
-export function buildApproveAgentTypedData(owner: string, walletChainIdHex: string) {
+export function buildApproveAgentTypedData(owner: string) {
   const w = getOrCreateAgentWallet(owner);
   const nonce = Date.now();
-  const agentName = `${AGENT_NAME_PREFIX}-${randomUUID().slice(0, 6)}`;
+  const agentName = `${AGENT_NAME_PREFIX}-${randomUUID().slice(0, 6)}`; // ≤16 字符（HL 硬限制）
   const action = {
     type: 'approveAgent',
     hyperliquidChain: isTestnet ? 'Testnet' : 'Mainnet',
-    signatureChainId: walletChainIdHex,
+    signatureChainId: HL_SIGNATURE_CHAIN_ID,
     agentAddress: w.agentAddress,
     agentName,
     nonce,
   };
   const typedData = {
-    domain: { name: 'HyperliquidSignTransaction', version: '1', chainId: Number(walletChainIdHex), verifyingContract: '0x0000000000000000000000000000000000000000' },
+    domain: { name: 'HyperliquidSignTransaction', version: '1', chainId: Number(HL_SIGNATURE_CHAIN_ID), verifyingContract: '0x0000000000000000000000000000000000000000' },
     types: {
       'HyperliquidTransaction:ApproveAgent': [
         { name: 'hyperliquidChain', type: 'string' },
@@ -71,8 +78,20 @@ export async function submitApproveAgent(owner: string, action: Record<string, u
     body: JSON.stringify({ action, nonce: action.nonce, signature: { r, s, v } }),
   });
   const body = (await res.json()) as { status: string; response?: unknown };
-  if (body.status !== 'ok') throw new Error(`approveAgent failed: ${JSON.stringify(body).slice(0, 300)}`);
   const w = store.wallets.find((x) => x.owner === owner)!;
+  if (body.status !== 'ok') {
+    // 账户没入过金时 HL 拒绝任何签名动作（含 approveAgent 本身）——这是 HL 自己的账户激活规则，不是我们的错。
+    // 产品决定：授权这一步不卡用户，本地照样标记「已授权」放用户去建 Agent；真缺钱的后果留到下单那一刻由 HL
+    // 按实际余额自然拒绝（liveOpenCarry 已有优雅失败+日志），到时候提示"重新授权"更准确、也更贴近用户实际状态。
+    // 其他签名/网络等真正的技术性失败仍然往外抛，走 logId 那条路。
+    if (typeof body.response === 'string' && /must deposit/i.test(body.response)) {
+      log.warn('live_approve_needs_deposit_soft_ok', { owner, agent: w.agentAddress, hlResponse: body.response });
+      w.approvedAt = new Date().toISOString();
+      saveStore();
+      return;
+    }
+    throw new Error(`approveAgent failed: ${JSON.stringify(body).slice(0, 300)}`);
+  }
   w.approvedAt = new Date().toISOString();
   saveStore();
   log.info('live_agent_approved', { owner, agent: w.agentAddress });

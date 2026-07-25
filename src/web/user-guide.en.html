@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<title>User Guide — CarryPilot</title>
+<style>
+  :root{--bg:#070b11;--panel:#10161f;--panel2:#151d29;--border:#222c3a;--text:#e9eef5;--dim:#8797a8;
+        --green:#2ee6a8;--blue:#4d9fff;--amber:#ffb454;--red:#ff5d6c;--purple:#a78bfa;}
+  *{box-sizing:border-box;margin:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font:15px/1.75 "Inter",-apple-system,sans-serif}
+  a{color:var(--blue)}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;color:var(--blue);font-size:.9em;background:rgba(77,159,255,.08);padding:1px 6px;border-radius:5px}
+  nav{position:sticky;top:0;z-index:10;background:rgba(7,11,17,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;padding:16px 28px}
+  .logo{font-size:18px;font-weight:800}.logo span{color:var(--green)}
+  .btn{display:inline-block;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:700;padding:9px 20px;border-radius:10px;text-decoration:none;font-size:14px;border:none;cursor:pointer}
+  .btn.ghost{background:none;border:1px solid var(--border);color:var(--text);margin-right:8px}
+  .shell{max-width:880px;margin:0 auto;padding:0 28px 100px}
+  .hero{padding:56px 0 20px}
+  .hero .tag{color:var(--green);font-size:12px;font-weight:800;letter-spacing:.06em;padding:5px 14px;border:1px solid rgba(46,230,168,.4);border-radius:20px;background:rgba(46,230,168,.08);display:inline-block;margin-bottom:16px}
+  .hero h1{font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:14px}
+  .hero p{color:var(--dim);font-size:16px;max-width:680px}
+  .toc{display:flex;gap:8px;flex-wrap:wrap;margin:26px 0 10px;padding-bottom:26px;border-bottom:1px solid var(--border)}
+  .toc a{color:var(--dim);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;text-decoration:none}
+  .toc a:hover{color:var(--text);border-color:var(--green)}
+  /* step timeline */
+  .steps{position:relative;margin:30px 0}
+  .steps::before{content:"";position:absolute;left:23px;top:14px;bottom:14px;width:2px;background:linear-gradient(var(--border),var(--border) 90%,transparent)}
+  .step{position:relative;padding:0 0 42px 64px}
+  .step:last-child{padding-bottom:6px}
+  .step .num{position:absolute;left:0;top:0;width:48px;height:48px;border-radius:14px;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--green)}
+  .step h2{font-size:20px;font-weight:800;margin-bottom:4px;scroll-margin-top:70px}
+  .step .desc{color:var(--dim);font-size:13.5px;margin-bottom:14px}
+  .step p{margin-bottom:10px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;margin:12px 0}
+  .card b{display:block;margin-bottom:4px}
+  .need{background:rgba(77,159,255,.08);border:1px solid rgba(77,159,255,.35);border-radius:12px;padding:14px 16px;font-size:13.5px;margin:14px 0}
+  .need .lb{color:var(--blue);font-weight:800;font-size:12px;letter-spacing:.03em;margin-bottom:4px;display:block}
+  .warn{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#ffd9a0;margin:14px 0}
+  .warn .lb{color:var(--amber);font-weight:800;font-size:12px;letter-spacing:.03em;margin-bottom:4px;display:block}
+  .ok{background:rgba(46,230,168,.08);border:1px solid rgba(46,230,168,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#a8f0d8;margin:14px 0}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media(max-width:640px){.branch{grid-template-columns:1fr}}
+  .branch .b{border:1px solid var(--border);border-radius:14px;padding:16px;background:var(--panel2)}
+  .branch .b.live{border-color:rgba(255,93,108,.35)}
+  .branch .b.paper{border-color:rgba(77,159,255,.35)}
+  .branch .b h3{font-size:14px;margin-bottom:8px}
+  .branch .b ol{padding-left:18px;font-size:13px;color:var(--dim)}
+  .branch .b ol li{margin-bottom:6px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+  .pill.field{background:rgba(167,139,250,.14);color:var(--purple)}
+  ul.plain{padding-left:20px;color:var(--dim);font-size:13.5px}
+  ul.plain li{margin-bottom:6px}
+  .faq{border-bottom:1px solid var(--border);padding:16px 0}
+  .faq b{display:block;margin-bottom:6px;font-size:14px}
+  .faq p{color:var(--dim);font-size:13.5px}
+  section{padding:10px 0}
+  footer{color:var(--dim);font-size:13px;padding:30px 28px;text-align:center}
+</style>
+</head>
+<body>
+<svg style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="rabbit-icon" viewBox="0 0 64 64">
+  <defs><linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2ee6a8"/><stop offset="100%" stop-color="#1bc4ff"/></linearGradient></defs>
+  <rect x="16" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(-12 21.5 20)"/>
+  <rect x="37" y="6" width="11" height="28" rx="5.5" fill="url(#rgrad)" transform="rotate(12 42.5 20)"/>
+  <rect x="19.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(-12 21.5 20)"/>
+  <rect x="40.5" y="10" width="4" height="17" rx="2" fill="#04121c" opacity=".4" transform="rotate(12 42.5 20)"/>
+  <circle cx="32" cy="41" r="19" fill="url(#rgrad)"/>
+  <circle cx="25.5" cy="38" r="2.5" fill="#04121c"/>
+  <circle cx="38.5" cy="38" r="2.5" fill="#04121c"/>
+  <path d="M29 46c1.2 1.3 3.8 1.3 5 0" stroke="#04121c" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="32" cy="43.3" rx="1.7" ry="1.2" fill="#04121c"/>
+</symbol></svg>
+
+<nav>
+  <div class="logo"><svg width="24" height="24" style="vertical-align:-7px;margin-right:2px"><use href="#rabbit-icon"/></svg> Carry<span>Pilot</span> <span style="color:var(--dim);font-weight:400;font-size:13px">/ User Guide</span></div>
+  <div><a class="btn ghost" href="/guide">中文</a><a class="btn ghost" href="/">← Home</a><a class="btn" href="/app">Launch App</a></div>
+</nav>
+<div class="shell">
+  <div class="hero">
+    <span class="tag">USER GUIDE</span>
+    <h1>From connecting a wallet to your first funding payout</h1>
+    <p>This guide walks the real click-path in order: which tab, which button, what the popup wants from you. Anywhere you have to <b style="color:var(--blue)">act yourself</b> (sign, transfer, click a specific button) is called out in a blue box — those are the steps the system won't do for you.</p>
+  </div>
+
+  <div class="toc">
+    <a href="#s1">① Connect wallet</a>
+    <a href="#s2">② Read the market</a>
+    <a href="#s3">③ Fuel</a>
+    <a href="#s4">④ Create an Agent</a>
+    <a href="#s5">⑤ While it runs</a>
+    <a href="#s6">⑥ Review</a>
+    <a href="#faq">FAQ</a>
+    <a href="#checklist">Action checklist</a>
+  </div>
+
+  <div class="steps">
+
+    <div class="step" id="s1">
+      <div class="num">1</div>
+      <h2>Connect your wallet</h2>
+      <div class="desc">Top-right "Connect Wallet" → pick a wallet → sign one message. No transaction, no gas, no access to your funds.</div>
+      <p>Click <b>Connect Wallet</b> in the top nav. A picker pops up:</p>
+      <ul class="plain">
+        <li>Desktop: if you have MetaMask / OKX Wallet / Rabby etc. installed, they're auto-listed (EIP-6963 multi-wallet discovery) — pick the one you want</li>
+        <li>Mobile: if you're on a regular mobile browser (not a wallet's built-in browser), you'll get deep-link buttons for MetaMask / OKX / Trust — tapping one opens this site inside that wallet app</li>
+      </ul>
+      <div class="need"><span class="lb">🙋 Needs you</span>Your wallet will prompt a message to sign (<code>personal_sign</code>) — a one-time nonce proving you control the address. <b>Click "Sign"</b> — this isn't a transfer, your wallet won't show a gas fee. If you arrived via a mobile deep link, tap <b>Connect Wallet again</b> once you're inside the wallet's browser to actually trigger the signature prompt.</div>
+      <p>Once signed, your address shows abbreviated top-right (e.g. <code>0xAb12…9f3D</code>). The session persists in local storage — no need to reconnect on refresh.</p>
+    </div>
+
+    <div class="step" id="s2">
+      <div class="num">2</div>
+      <h2>Read the funding rates and opportunities</h2>
+      <div class="desc">These two tabs don't need a wallet — anyone can browse them. Worth a look before you spin up an Agent, to see whether now is actually a good time.</div>
+      <p><b>📡 Funding Rates</b>: market-wide funding rate table with tag filters (opportunity / longs pay / shorts pay / elevated / volatile / wrapped spot). Click a row to expand its 7-day hourly funding chart.</p>
+      <p><b>🔬 Opportunities</b>: each card is a candidate the engine computed. <b style="color:var(--green)">Green-highlighted</b> cards are genuinely positive after every cost is deducted. Click a card to see the hedge structure (spot leg + perp leg), a cost waterfall (fees/slippage/reserve deducted step by step), and a plain-language payout table for $1,000–$20,000 of capital.</p>
+      <div class="ok">💡 It's normal for the whole market to show zero opportunities — that's not a bug. Funding rates move; the engine would rather honestly say "nothing right now" than fabricate a number just to have content. A running Agent will grab an opportunity the moment one appears — you don't need to watch it.</div>
+    </div>
+
+    <div class="step" id="s3">
+      <div class="num">3</div>
+      <h2>Get fuel (INJ credits)</h2>
+      <div class="desc">Every Agent round (10 minutes) burns credits. Here's where they come from and how to add more.</div>
+      <p>Once you connect a wallet you automatically get <b>500 free trial credits</b> (roughly 2,500 rounds — plenty for testing on paper without topping up). To add more, or once the trial runs out, go to <b>Settings → INJ Credits</b>:</p>
+      <div class="card">
+        <b>Top-up flow</b>
+        <ol style="padding-left:18px;font-size:13.5px;color:var(--dim)">
+          <li>The page shows a "treasury address" and "your Injective native address" (derived automatically from the EVM address you logged in with — same private key controls both)</li>
+          <li>From your own wallet, send native INJ from <b>that Injective address</b> to the treasury address</li>
+          <li>Come back and click <b>"I've sent it, scan for deposit"</b></li>
+        </ol>
+      </div>
+      <div class="need"><span class="lb">🙋 Needs you (both steps, neither is skippable)</span>① The transfer itself happens in your own wallet app / Injective client — this site doesn't do it for you; ② <b>crediting is not automatic</b> — after transferring you must come back and click "scan for deposit" yourself, so the system checks the chain and credits your account (deduped by tx hash, so clicking more than once won't double-credit — feel free to retry).</div>
+      <p>Exchange rate and burn: 1 INJ = 100 credits, each running Agent burns 0.2 credits per 10-minute round.</p>
+    </div>
+
+    <div class="step" id="s4">
+      <div class="num">4</div>
+      <h2>Create an Agent</h2>
+      <div class="desc">Agent Center tab — pick a workspace (paper / live), fill the form, click create. The two paths have different prerequisites; expand whichever applies to you.</div>
+      <table>
+        <tr><th>Field</th><th>What it means</th></tr>
+        <tr><td><span class="pill field">Name</span></td><td>Anything — just so you recognize it in the list</td></tr>
+        <tr><td><span class="pill field">Target asset</span></td><td>Pick a specific coin, or "auto (all)" and let the engine pick the current best one</td></tr>
+        <tr><td><span class="pill field">Style</span></td><td>Conservative (net APR ≥15% to enter · 30% of capital) / Balanced (≥8% · 50%) / Aggressive (≥4% · 80%) — sets the entry bar and position sizing</td></tr>
+        <tr><td><span class="pill field">Capital</span></td><td>Notional cap for this Agent; paper caps at $100,000, live is hard-capped at $2,000 (enforced by RiskGuard, not adjustable)</td></tr>
+        <tr><td><span class="pill field">Rounds</span></td><td>Lifecycle, 10–120 rounds (120 ≈ 20 hours); it closes out and stops automatically when it runs out</td></tr>
+        <tr><td><span class="pill field">LLM preference</span></td><td>Optional — use a preset template or write your own "preferred assets / avoid conditions / min confidence," always inside the system's risk-control framework; it can never suggest leverage or alter numbers</td></tr>
+      </table>
+      <p>Up to 5 Agents per user at a time. Click <b>"Create & Run"</b> and it fires its first decision immediately — no need to wait 10 minutes.</p>
+
+      <div class="branch">
+        <div class="b paper">
+          <h3>🧪 Paper (start here if you're new)</h3>
+          <ol>
+            <li>Set mode to PAPER</li>
+            <li>Create it directly — zero risk, draws from your virtual balance (Settings → Virtual Account, default $10,000)</li>
+            <li>No real assets involved — the only thing it spends is credits</li>
+          </ol>
+        </div>
+        <div class="b live">
+          <h3>⚡ Live (real orders, two prerequisites, both required)</h3>
+          <ol>
+            <li><b>Your Hyperliquid account needs USDC first</b> — you fund that yourself at <a href="https://app.hyperliquid.xyz" target="_blank" rel="noopener">app.hyperliquid.xyz</a>; CarryPilot doesn't deposit funds on your behalf</li>
+            <li>Back here, go to <b>Settings → Live Setup</b>, click "Authorize live API wallet" — your wallet will prompt <b>a different kind of signature</b> (EIP-712 structured signing, not the same as the login signature) — confirm it</li>
+            <li>The system generates an API wallet that's yours alone (<b>trade-only, no withdrawal permission</b>) — after this, creating a LIVE Agent won't be rejected</li>
+          </ol>
+        </div>
+      </div>
+      <div class="need"><span class="lb">🙋 Needs you</span>Select LIVE mode without finishing both live steps and the backend rejects the create with "live mode requires API wallet authorization first" — it won't skip this for you. It's one-time: once authorized, every live Agent you create afterward can use it.</div>
+    </div>
+
+    <div class="step" id="s5">
+      <div class="num">5</div>
+      <h2>While an Agent is running, what do you do?</h2>
+      <div class="desc">Almost nothing, normally. Every 10 minutes it does this on its own: pull the latest rates → compute costs → AI judgment → risk filter → open/rotate/close/hold, every step logged with a reason.</div>
+      <p>Things you can — and sometimes need to — do:</p>
+      <ul class="plain">
+        <li>Click an Agent card to open its detail drawer: full config, trade history, accumulated review memory, decision log</li>
+        <li>Manually <b>"Stop"</b> / <b>"Start"</b>: stopping closes any open position first, then stops; starting resumes it from the next round</li>
+        <li>Manually <b>"Close"</b>: close the current position yourself instead of waiting for the Agent's own exit judgment</li>
+        <li><b>"Delete"</b>: only available once an Agent is stopped and flat (no open position)</li>
+      </ul>
+      <div class="warn"><span class="lb">⚠ Situations that interrupt it and need you to come back</span>When credits (fuel) run out, the Agent <b>pauses itself automatically</b> and logs "insufficient credits, Agent paused" — it will <b>not</b> resume on its own once you top up; you need to go to Settings, add credits, then come back to Agent Center and click "Start." Running out its round budget (the 120-round cap) also auto-closes and stops it, and likewise needs you to decide whether to create a new one.</div>
+    </div>
+
+    <div class="step" id="s6">
+      <div class="num">6</div>
+      <h2>Review and monitor</h2>
+      <div class="desc">Two read-only centers, browse anytime, nothing to operate.</div>
+      <p><b>📈 Earnings</b>: combined PnL curve across all Agents, every closed position (with a tamper-evident receipt hash).</p>
+      <p><b>🛡️ Risk</b>: risk level per open position (LOW/MEDIUM/HIGH), a 48-hour three-scenario PnL projection (rate holds / decays / flips); once you've completed live authorization, this page also shows "Live Account" — your Hyperliquid account equity, withdrawable balance, real positions, and the last 7 days of funding settlements.</p>
+    </div>
+
+  </div>
+
+  <section id="faq">
+    <h2 style="font-size:22px;font-weight:800;margin:20px 0 6px">FAQ</h2>
+    <div class="faq"><b>Does connecting a wallet cost gas?</b><p>No. Login is just signing a message (personal_sign) — nothing goes on-chain, no gas. The only actions that touch your wallet for real are "live authorization" (EIP-712, still gasless — it's a signature, not a transaction) and sending INJ to top up credits (that transfer costs gas on whatever chain you send it from).</p></div>
+    <div class="faq"><b>Do paper and live data mix?</b><p>No. Agents, positions, earnings and risk stats are fully isolated by workspace (PAPER/LIVE) — the toggle at the top of Agent Center makes it obvious which side you're looking at.</p></div>
+    <div class="faq"><b>I sent INJ but credits didn't show up — now what?</b><p>First confirm: you sent native INJ, to the treasury address shown on the page, from the Injective address tied to your logged-in wallet. Then wait a bit (on-chain confirmation takes time) and click "scan for deposit" again. Clicking multiple times won't double-credit — it's deduped by tx hash.</p></div>
+    <div class="faq"><b>What's the max I can lose in live mode?</b><p>A single live Agent is hard-capped at $2,000 — enforced in code by RiskGuard, not adjustable from the frontend or backend. The authorized API wallet has no withdrawal permission, so even a leaked key can't move principal out — it can only trade.</p></div>
+    <div class="faq"><b>Why does my Agent just sit flat?</b><p>Normal — the engine only opens a position when net APR clears every cost. When rates aren't high enough, the Agent honestly stays on the sidelines and logs exactly which threshold isn't met, rather than forcing a losing trade just to look active.</p></div>
+  </section>
+
+  <section id="checklist">
+    <h2 style="font-size:22px;font-weight:800;margin:20px 0 6px">🙋 Actions that need you · Summary</h2>
+    <table>
+      <tr><th>Action</th><th>Where</th><th>Why it can't be automatic</th></tr>
+      <tr><td>Sign in with wallet</td><td>Top-right "Connect Wallet"</td><td>Identity verification requires your private key</td></tr>
+      <tr><td>Send INJ to the treasury</td><td>Settings → INJ Credits</td><td>A real transfer — only you can operate your own wallet</td></tr>
+      <tr><td>Click "scan for deposit"</td><td>Settings → INJ Credits</td><td>The system doesn't poll chain state; you trigger the check</td></tr>
+      <tr><td>Deposit USDC into Hyperliquid</td><td>app.hyperliquid.xyz (off-site)</td><td>Live trading needs real margin; CarryPilot never custodies funds</td></tr>
+      <tr><td>EIP-712 signature authorizing the API wallet</td><td>Settings → Live Setup</td><td>Explicitly granting a "trade-only" scope requires your signature</td></tr>
+      <tr><td>Manually "Start" after credits run out</td><td>Agent Center</td><td>Won't auto-resume, so it doesn't keep burning while you're not watching</td></tr>
+      <tr><td>Manual "Close" (optional)</td><td>Agent Center / Agent detail</td><td>Defaults to the Agent's own judgment — you can step in early anytime</td></tr>
+    </table>
+  </section>
+</div>
+<footer>
+  <svg width="16" height="16" style="vertical-align:-3px;margin-right:2px"><use href="#rabbit-icon"/></svg> CarryPilot · <a href="/">Home</a> · <a href="/en/agents">Agent Docs</a> · <a href="/app">Launch App</a>
+</footer>
+</body>
+</html>

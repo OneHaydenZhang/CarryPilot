@@ -12,7 +12,9 @@ import { tickAgents, closePosition, viewPosition, STYLE_PARAMS, LIMITS, type Liv
 import { llmEnabled } from '../core/llm.js';
 import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINTS } from '../core/points.js';
 import { buildApproveAgentTypedData, submitApproveAgent, liveOpenCarry, liveCloseCarry, fetchLiveAccount, getOrCreateAgentWallet } from '../connectors/hlExchange.js';
-import { agentCard, classify, answerRates, answerOpportunities } from './agentApi.js';
+import { agentCard, classify, answerRates, answerOpportunities, handleA2A } from './agentApi.js';
+import { handleMcpRequest } from './mcpServer.js';
+import { buildReportApp } from './reportApp.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const CACHE_TTL_MS = 60_000;
@@ -20,6 +22,11 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const pages = {
   landing: readFileSync(join(__dir, 'landing.html')),
   app: readFileSync(join(__dir, 'app.html')),
+  agentDocs: readFileSync(join(__dir, 'agent-docs.html')),
+  agentDocsEn: readFileSync(join(__dir, 'agent-docs.en.html')),
+  userGuide: readFileSync(join(__dir, 'user-guide.html')),
+  userGuideEn: readFileSync(join(__dir, 'user-guide.en.html')),
+  favicon: readFileSync(join(__dir, 'favicon.svg')),
 };
 
 const DISCLAIMER =
@@ -78,7 +85,35 @@ async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> 
     return {};
   }
 }
+const JSON_PARSE_FAILED = Symbol('json_parse_failed');
+async function readBodyStrict(req: IncomingMessage): Promise<Record<string, unknown> | typeof JSON_PARSE_FAILED> {
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString() || '{}');
+  } catch {
+    return JSON_PARSE_FAILED;
+  }
+}
 const spotByBase = () => new Map((scan?.spots ?? []).map((s) => [s.baseToken, s]));
+function buildRates(s: ScanState) {
+  const sb = spotByBase();
+  return s.perps.map((p) => ({
+    coin: p.coin,
+    hourlyFundingPct: p.hourlyFunding * 100,
+    annualizedPct: p.hourlyFunding * 24 * 365 * 100,
+    markPx: p.markPx,
+    hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
+  }));
+}
+
+// ---------- x402 付费报告（挂一个只有这一条路由的 Express app）----------
+const reportApp = buildReportApp({
+  async getReport() {
+    const s = await getScan();
+    return { candidates: s.candidates, rates: buildRates(s), generatedAt: s.generatedAt };
+  },
+});
 
 // ---------- 路由 ----------
 const server = createServer(async (req, res) => {
@@ -87,7 +122,13 @@ const server = createServer(async (req, res) => {
   try {
     if (path === '/') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.landing);
     if (path === '/app') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.app);
+    if (path === '/agents') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.agentDocs);
+    if (path === '/en/agents') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.agentDocsEn);
+    if (path === '/guide') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.userGuide);
+    if (path === '/en/guide') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.userGuideEn);
     if (path === '/api/health') return json(res, 200, { status: 'ok', engineVersion: ENGINE_VERSION, network: config.network });
+    if (path === '/favicon.svg' || path === '/favicon.ico')
+      return void res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' }).end(pages.favicon);
 
     // ---- 对外 Agent 能力（A2A / MCP 地基，只读免鉴权）----
     if (path === '/.well-known/agent-card.json' || path === '/api/agent/card') {
@@ -97,15 +138,11 @@ const server = createServer(async (req, res) => {
       const q = req.method === 'POST' ? String((await readBody(req)).query ?? '') : (url.searchParams.get('q') ?? '');
       if (!q.trim()) return json(res, 400, { error: 'empty query', hint: '传 ?q=... 或 POST {query}. 例：BTC 资金费率 / 现在有什么套利机会' });
       const s = await getScan();
-      const sb = spotByBase();
-      const rates = s.perps.map((p) => ({
-        coin: p.coin,
-        hourlyFundingPct: p.hourlyFunding * 100,
-        annualizedPct: p.hourlyFunding * 24 * 365 * 100,
-        markPx: p.markPx,
-        hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
-      }));
-      const { intent, coin } = classify(q);
+      const rates = buildRates(s);
+      const { intent, coin } = classify(
+        q,
+        rates.map((r) => r.coin),
+      );
       const generatedAt = s.generatedAt;
       if (intent === 'arbitrage_opportunity') return json(res, 200, { query: q, coin, generatedAt, disclaimer: DISCLAIMER, ...answerOpportunities(s.candidates, coin) });
       if (intent === 'funding_rates') return json(res, 200, { query: q, coin, generatedAt, disclaimer: DISCLAIMER, ...answerRates(rates, coin) });
@@ -116,6 +153,29 @@ const server = createServer(async (req, res) => {
         message: '我能回答两类问题：① 资金费率（如「BTC 费率多少」「哪些币费率最高」）② 套利机会（如「现在有什么套利机会」「ETH 值得做吗」）。',
         skills: ['funding_rates', 'arbitrage_opportunity'],
       });
+    }
+
+    // ---- A2A：标准 JSON-RPC 2.0 message/send（其他 Agent 用 A2A 协议调用本 Agent）----
+    if (path === '/api/a2a' && req.method === 'POST') {
+      const body = await readBodyStrict(req);
+      if (body === JSON_PARSE_FAILED) return json(res, 200, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error: invalid JSON' } });
+      const s = await getScan();
+      return json(res, 200, handleA2A(body, { rates: buildRates(s), candidates: s.candidates, generatedAt: s.generatedAt }));
+    }
+
+    // ---- MCP：Streamable HTTP（其他 Agent host 用标准 MCP client 接入）----
+    if (path === '/mcp') {
+      if (req.method === 'POST') {
+        const body = await readBody(req);
+        return void (await handleMcpRequest(req, res, body));
+      }
+      return json(res, 405, { jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed. POST JSON-RPC to this endpoint.' }, id: null });
+    }
+
+    // ---- x402：付费完整报告（EIP-3009 gasless USDC，Injective 链）----
+    if (path === '/api/agent/report') {
+      if (!reportApp) return json(res, 501, { error: 'x402 not configured on this deployment' });
+      return void reportApp(req, res);
     }
 
     if (path === '/api/scan') {
@@ -263,9 +323,10 @@ const server = createServer(async (req, res) => {
               const r = await liveCloseCarry(owner, open);
               open.fills = [...(open.fills ?? []), ...r.fills];
             } catch (err) {
-              agent.log.push({ at: new Date().toISOString(), msg: `⚠ 停止时实盘平仓失败: ${String(err).slice(0, 100)}` });
+              const logId = log.errorId('live_close_on_stop_failed', err, { owner, agentId: agent.id, positionId: open.id });
+              agent.log.push({ at: new Date().toISOString(), msg: `⚠ 停止时实盘平仓失败: ${String(err).slice(0, 100)}（错误码 ${logId}）` });
               saveStore();
-              return json(res, 500, { error: '实盘平仓失败，Agent 已停止但仓位仍在，请稍后手动平仓' });
+              return json(res, 500, { error: '实盘平仓失败，Agent 已停止但仓位仍在，请稍后手动平仓', logId });
             }
           }
           closePosition(open, 'AGENT_STOPPED');
@@ -291,7 +352,8 @@ const server = createServer(async (req, res) => {
           const r = await liveCloseCarry(owner, pos);
           pos.fills = [...(pos.fills ?? []), ...r.fills];
         } catch (err) {
-          return json(res, 500, { error: `实盘平仓失败: ${String(err).slice(0, 150)}` });
+          const logId = log.errorId('live_close_failed', err, { owner, positionId: pos.id });
+          return json(res, 500, { error: `实盘平仓失败: ${String(err).slice(0, 150)}`, logId });
         }
       }
       closePosition(pos, 'MANUAL');
@@ -300,9 +362,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (path === '/api/live/typed-data' && req.method === 'POST') {
-      const b = await readBody(req);
-      const chainIdHex = String(b.chainIdHex || '0x1');
-      return json(res, 200, buildApproveAgentTypedData(owner, chainIdHex));
+      return json(res, 200, buildApproveAgentTypedData(owner));
     }
     if (path === '/api/live/approve' && req.method === 'POST') {
       const b = await readBody(req);
@@ -310,21 +370,23 @@ const server = createServer(async (req, res) => {
         await submitApproveAgent(owner, b.action as Record<string, unknown>, String(b.signature) as `0x${string}`);
         return json(res, 200, { ok: true, agentAddress: getOrCreateAgentWallet(owner).agentAddress });
       } catch (err) {
-        return json(res, 400, { error: String(err).slice(0, 250) });
+        const logId = log.errorId('live_approve_failed', err, { owner });
+        return json(res, 400, { error: String(err).slice(0, 250), logId });
       }
     }
     if (path === '/api/live/account') {
       try {
         return json(res, 200, await fetchLiveAccount(owner));
       } catch (err) {
-        return json(res, 502, { error: String(err).slice(0, 200) });
+        const logId = log.errorId('live_account_fetch_failed', err, { owner });
+        return json(res, 502, { error: String(err).slice(0, 200), logId });
       }
     }
 
     return json(res, 404, { error: 'not found' });
   } catch (err) {
-    log.error('http_error', { path, error: String(err) });
-    return json(res, 500, { error: 'internal error' });
+    const logId = log.errorId('http_error', err, { path });
+    return json(res, 500, { error: 'internal error', logId });
   }
 });
 
