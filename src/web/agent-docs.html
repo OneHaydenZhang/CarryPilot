@@ -50,7 +50,8 @@
   .pill.post{background:rgba(77,159,255,.14);color:var(--blue)}
   .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;margin:14px 0}
   .card b{display:block;margin-bottom:4px}
-  .warn{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#ffd9a0;margin:14px 0}
+  .warn{display:block;background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.7;color:#ffd9a0;margin:14px 0}
+  .endpoint-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
   .ok{background:rgba(46,230,168,.08);border:1px solid rgba(46,230,168,.3);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#a8f0d8;margin:14px 0}
   footer{color:var(--dim);font-size:13px;padding:30px 28px;text-align:center}
 </style>
@@ -209,8 +210,8 @@ const result = await client.callTool({ name: "find_arbitrage", arguments: {} });
   <section id="x402">
     <h2><span class="n">⑤</span>x402：按次付费拿完整报告</h2>
     <p class="lead">免费三个入口只回答"你问的那一句"。完整报告（全市场候选 + 全费率表，不是摘要）走 <a href="https://x402.org" target="_blank" rel="noopener">x402</a> 协议收 USDC——HTTP 402 起手，链上 <code>EIP-3009</code> 免 gas 签名支付，全程无需人工介入，AI agent 可以自己付钱自己拿数据。</p>
-    <span class="pill get">GET</span> <code>/api/agent/report</code>
-    <span class="warn">当前状态：Injective <b>testnet</b>。402 报价握手 + EIP-3009 签名 + 余额校验均已验证跑通；链上结算（最后一步，等 payer 测试网钱包完成充值）验证中，完成后这里会更新为已验证</span>
+    <div class="endpoint-line"><span class="pill get">GET</span> <code>/api/agent/report</code></div>
+    <span class="warn">当前状态：Injective <b>testnet</b>（eip155:1439）。402 报价握手、EIP-3009 签名、客户端自动付费流程均已端到端跑通（见 <code>scripts/x402-a2a-test.ts</code>）；最后一步链上结算需给 payer 测试网钱包充值 USDC，充值后即完成全链路验证。</span>
 
     <h3>第 1 步：不带支付直接请求 → 收到 402 报价</h3>
     <div class="code">curl <span class="origin"></span>/api/agent/report</div>
