@@ -77,6 +77,7 @@
 <div class="layout">
 <aside class="sidebar" id="sidebar">
   <div class="stitle">目录</div>
+  <a href="#evidence">⓪ 链上证据</a>
   <a href="#card">① Agent Card</a>
   <a href="#http">② HTTP</a>
   <a href="#a2a">③ A2A</a>
@@ -91,6 +92,22 @@
     <h1>把 CarryPilot 接进你的 Agent</h1>
     <p>CarryPilot 除了是一个人用的交易平台，同时也是一个可被其他 AI Agent 调用的<b>研究服务</b>：查 Hyperliquid 资金费率现状、查扣完成本后的市场中性套利机会。免费部分只读免鉴权；完整报告走 <a href="#x402">x402</a> 按次付费。三种协议任选。</p>
   </div>
+
+  <section id="evidence" style="padding:0 0 30px">
+    <div class="card" style="border-color:rgba(46,230,168,.35)">
+      <b style="font-size:15px">🔗 链上证据（Injective Testnet，点开即可自行核实）</b>
+      <p class="lead" style="margin:6px 0 12px">下面每一项都是可独立验证的真实链上数据/交易，不是截图或编造——地址页/交易页都是 Blockscout 公开浏览器链接。</p>
+      <table>
+        <tr><th>项目</th><th>地址 / 哈希</th><th>说明</th></tr>
+        <tr><td>USDC 合约（testnet）</td><td><a href="https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d" target="_blank" rel="noopener">0x0C38…4C5d ↗</a></td><td>Circle FiatTokenV2_2，支持 EIP-3009 免 gas 授权</td></tr>
+        <tr><td>x402 payer 付款方钱包</td><td><a href="https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac" target="_blank" rel="noopener">0x55Fb…93Ac ↗</a></td><td>模拟"外部 AI Agent 付款方"，持 20 testnet USDC</td></tr>
+        <tr><td>x402 收款金库 / facilitator</td><td><a href="https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE" target="_blank" rel="noopener">0xF352…86cE ↗</a></td><td>402 报价里的 <code>payTo</code> / 结算方，持 1 testnet INJ 付 gas</td></tr>
+        <tr><td><b>INJ 充值交易</b>（facilitator gas）</td><td><a href="https://testnet.blockscout.injective.network/tx/0x627233da38018a2d4e51ed3cade72a438a908114fdf1cc484512c32895eca76d" target="_blank" rel="noopener">0x6272…a76d ↗</a></td><td>1 INJ → facilitator · 区块 134,670,989 · 2026-07-25 16:24:49 UTC · 成功</td></tr>
+        <tr><td><b>x402 结算交易</b>（付费成交）</td><td><a href="https://testnet.blockscout.injective.network/tx/0xbdf6030ee3b06bacb4cc4c15748844daa7dd69fc5a86eab4260c0416b459dd73" target="_blank" rel="noopener">0xbdf6…dd73 ↗</a></td><td>0.01 USDC · payer→facilitator · EIP-3009 代付 gas · 已确认上链</td></tr>
+      </table>
+      <div class="ok">✅ <b>x402 全链路已实测跑通并确认上链</b>：402 报价握手 → EIP-3009 免 gas 签名 → facilitator 代付 gas 链上结算，0.01 USDC 由 payer 转入 facilitator（payer <code>20.00→19.99</code>、facilitator <code>0→0.01</code>，账实相符）。Injective testnet RPC/LCD 直连无地域封锁。</div>
+    </div>
+  </section>
 
   <div class="toc">
     <a href="#card">① Agent Card</a>

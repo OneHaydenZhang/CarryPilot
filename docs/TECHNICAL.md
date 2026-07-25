@@ -24,7 +24,11 @@
 | testnet USDC（EIP-3009 FiatTokenV2_2） | Injective EVM testnet · 1439 | `0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d) |
 | INJ 积分充值金库（Cosmos MsgSend 收款） | Injective mainnet · injective-1 | `inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu` | [injscan ↗](https://injscan.com/account/inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu/) |
 
-> **同一 facilitator 地址跨网说明**：`0xF352…86cE`（= `inj17dfx…sqpe`）在 **testnet** 持有 1 INJ 用于 x402 结算付 gas（[testnet ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE)，x402 结算已确认上链，见下）；此外其 **mainnet** 地址另收过一笔 **0.1 INJ**（真实主网转账，[injscan 主网 ↗](https://injscan.com/account/inj17dfx3909st99letr248uts2k7fpm4pkwtvsqpe/)），私钥可控、资金未丢，与 testnet 结算互不影响。
+| **INJ 充值交易**（facilitator gas，1 INJ，已确认） | Injective EVM testnet · 1439 | tx `0x627233da…eca76d` | [Blockscout ↗](https://testnet.blockscout.injective.network/tx/0x627233da38018a2d4e51ed3cade72a438a908114fdf1cc484512c32895eca76d) |
+| **x402 结算交易**（0.01 USDC，payer→facilitator，已确认） | Injective EVM testnet · 1439 | tx `0xbdf6030e…459dd73` | [Blockscout ↗](https://testnet.blockscout.injective.network/tx/0xbdf6030ee3b06bacb4cc4c15748844daa7dd69fc5a86eab4260c0416b459dd73) |
+
+> **facilitator gas 充值记录**：`0x627233da…eca76d` —— `0x3943…4975` 向 facilitator `0xF352…86cE` 转入 **1 INJ**（block 134,670,989，2026-07-25 16:24:49 UTC，成功），此后 x402 结算即拿到确认哈希（下）。
+> **同一 facilitator 地址跨网说明**：`0xF352…86cE`（= `inj17dfx…sqpe`）在 **testnet** 持 1 INJ 付 gas；其 **mainnet** 地址另收过一笔 **0.1 INJ**（真实主网转账，[injscan 主网 ↗](https://injscan.com/account/inj17dfx3909st99letr248uts2k7fpm4pkwtvsqpe/)），私钥可控、资金未丢，与 testnet 结算互不影响。
 
 ### x402 付费结算涉及的合约与地址
 

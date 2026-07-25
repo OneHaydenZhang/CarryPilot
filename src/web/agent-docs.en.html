@@ -76,6 +76,7 @@
 <div class="layout">
 <aside class="sidebar" id="sidebar">
   <div class="stitle">Contents</div>
+  <a href="#evidence">⓪ On-chain evidence</a>
   <a href="#card">① Agent Card</a>
   <a href="#http">② HTTP</a>
   <a href="#a2a">③ A2A</a>
@@ -90,6 +91,22 @@
     <h1>Wire CarryPilot into your agent</h1>
     <p>CarryPilot is a trading platform for humans, but it's also a <b>research service other AI agents can call</b>: current Hyperliquid funding rates, and market-neutral arbitrage opportunities net of every cost. The free tier is read-only, no auth required; the full report is metered via <a href="#x402">x402</a>. Pick whichever of the three protocols fits your stack.</p>
   </div>
+
+  <section id="evidence" style="padding:0 0 30px">
+    <div class="card" style="border-color:rgba(46,230,168,.35)">
+      <b style="font-size:15px">🔗 On-chain evidence (Injective Testnet — verify it yourself)</b>
+      <p class="lead" style="margin:6px 0 12px">Every row below is independently verifiable real chain data / transactions — not screenshots or made-up numbers. Address and tx pages are public Blockscout explorer links.</p>
+      <table>
+        <tr><th>Item</th><th>Address / Hash</th><th>Note</th></tr>
+        <tr><td>USDC contract (testnet)</td><td><a href="https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d" target="_blank" rel="noopener">0x0C38…4C5d ↗</a></td><td>Circle FiatTokenV2_2, EIP-3009 gasless auth</td></tr>
+        <tr><td>x402 payer wallet</td><td><a href="https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac" target="_blank" rel="noopener">0x55Fb…93Ac ↗</a></td><td>Simulates an "external AI-agent payer", holds 20 testnet USDC</td></tr>
+        <tr><td>x402 treasury / facilitator</td><td><a href="https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE" target="_blank" rel="noopener">0xF352…86cE ↗</a></td><td>The 402 quote's <code>payTo</code> / settler, holds 1 testnet INJ for gas</td></tr>
+        <tr><td><b>INJ deposit tx</b> (facilitator gas)</td><td><a href="https://testnet.blockscout.injective.network/tx/0x627233da38018a2d4e51ed3cade72a438a908114fdf1cc484512c32895eca76d" target="_blank" rel="noopener">0x6272…a76d ↗</a></td><td>1 INJ → facilitator · block 134,670,989 · 2026-07-25 16:24:49 UTC · success</td></tr>
+        <tr><td><b>x402 settlement tx</b> (paid call)</td><td><a href="https://testnet.blockscout.injective.network/tx/0xbdf6030ee3b06bacb4cc4c15748844daa7dd69fc5a86eab4260c0416b459dd73" target="_blank" rel="noopener">0xbdf6…dd73 ↗</a></td><td>0.01 USDC · payer→facilitator · gas sponsored via EIP-3009 · confirmed on-chain</td></tr>
+      </table>
+      <div class="ok">✅ <b>The full x402 flow is verified end-to-end and confirmed on-chain</b>: 402 quote handshake → EIP-3009 gasless signature → facilitator-sponsored on-chain settlement, 0.01 USDC moved payer→facilitator (payer <code>20.00→19.99</code>, facilitator <code>0→0.01</code>, balances reconcile). Injective testnet RPC/LCD reachable directly, no geo-block.</div>
+    </div>
+  </section>
 
   <div class="toc">
     <a href="#card">① Agent Card</a>
