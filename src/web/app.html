@@ -100,27 +100,6 @@
   .wopt:hover{border-color:var(--green);background:var(--panel2)}
   .wopt img{width:30px;height:30px;border-radius:8px}
   .wopt b{font-size:14px}
-  /* 对话助手 */
-  #chat-fab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;font-size:24px;z-index:80;
-    background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;box-shadow:0 8px 30px rgba(46,230,168,.35);transition:.2s}
-  #chat-fab:hover{transform:scale(1.08)}
-  #chat-panel{position:fixed;right:22px;bottom:88px;width:min(400px,94vw);height:min(600px,72vh);background:var(--panel);border:1px solid var(--border);
-    border-radius:18px;z-index:80;display:none;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  #chat-panel.on{display:flex}
-  .chat-hd{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel2)}
-  #chat-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-  .msg{max-width:88%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
-  .msg.u{align-self:flex-end;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;border-bottom-right-radius:4px}
-  .msg.a{align-self:flex-start;background:var(--panel2);border:1px solid var(--border);border-bottom-left-radius:4px}
-  .chat-in{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
-  .chat-in input{flex:1}
-  .qcard{align-self:flex-start;max-width:94%;background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:12px;padding:12px;font-size:12px}
-  .qcard.no{border-left-color:var(--dim)}
-  .qcard .qh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-  .qcard .qbig{font-size:20px;font-weight:800}
-  .chat-sug{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
-  .chat-sug span{border:1px solid var(--border);border-radius:12px;padding:4px 10px;font-size:11px;color:var(--dim);cursor:pointer}
-  .chat-sug span:hover{border-color:var(--green);color:var(--text)}
   /* 移动端 */
   @media(max-width:760px){
   @media(max-width:760px){
@@ -143,21 +122,12 @@
     .legbox{min-width:0}
     .modal{padding:18px}
   }
-  /* 对话小助手 */
-  .chatfab{position:fixed;right:24px;bottom:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--green),#1bc4ff);border:none;cursor:pointer;box-shadow:0 8px 26px rgba(46,230,168,.35);z-index:80;display:flex;align-items:center;justify-content:center;transition:.15s}
-  .chatfab:hover{transform:translateY(-2px) scale(1.04)}
-  .chatfab svg{width:30px;height:30px}
-  .chatfab .dot{position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--bg);animation:cdotpulse 2s ease-in-out infinite}
-  @keyframes cdotpulse{0%,100%{box-shadow:0 0 0 0 rgba(46,230,168,.5)}50%{box-shadow:0 0 0 5px rgba(46,230,168,0)}}
-  .chatpanel{position:fixed;right:24px;bottom:92px;width:min(380px,92vw);height:min(560px,74vh);background:var(--panel);border:1px solid var(--border);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.45);z-index:80;display:none;grid-template-rows:auto 1fr auto auto;overflow:hidden;animation:chatpop .18s ease}
-  .chatpanel.on{display:grid}
-  @keyframes chatpop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-  .chat-hd{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel2)}
-  .chat-hd b{font-size:14px}
-  .chat-hd .sub{color:var(--dim);font-size:11px}
-  .chat-hd .x{margin-left:auto;cursor:pointer;color:var(--dim);background:none;border:none;font-size:18px;line-height:1;padding:4px}
-  .chat-body{min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
-  .msg{display:flex;gap:8px;max-width:92%;flex-shrink:0}
+  /* 对话 tab */
+  .chatwrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:440px}
+  .chat-tophint{display:flex;align-items:center;gap:12px;padding:0 4px 14px;border-bottom:1px solid var(--border);margin-bottom:12px}
+  .chat-tophint b{font-size:16px}
+  .chat-body{flex:1;min-height:0;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:14px}
+  .msg{display:flex;gap:8px;max-width:82%;flex-shrink:0}
   .msg.user{align-self:flex-end;flex-direction:row-reverse}
   .msg .av{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--border);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
   .msg .av svg{width:16px;height:16px}
@@ -171,18 +141,18 @@
   .chat-mini{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12.5px;cursor:pointer}
   .chat-mini:last-child{border-bottom:none}
   .chat-mini:hover{color:var(--text)}
-  .suggest{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px}
-  .suggest .chip{font-size:11.5px;padding:5px 11px}
-  .chat-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
-  .chat-input input{flex:1}
-  .chat-input button{border-radius:10px}
+  .suggest{display:flex;flex-wrap:wrap;gap:6px;padding:10px 2px 6px}
+  .suggest .chip{font-size:12px;padding:6px 13px;cursor:pointer}
+  .chat-input{display:flex;gap:8px;padding:10px 0 0;border-top:1px solid var(--border)}
+  .chat-input input{flex:1;padding:11px 14px}
+  .chat-input button{border-radius:10px;padding:0 22px}
   .typing{display:flex;gap:3px;padding:4px 2px}
   .typing i{width:5px;height:5px;border-radius:50%;background:var(--dim);animation:typedot 1.2s infinite ease-in-out}
   .typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
   @keyframes typedot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
   @media(max-width:760px){
-    .chatpanel{width:calc(100vw - 24px);right:12px;height:min(70vh,560px)}
-    .chatfab{right:16px;bottom:16px}
+    .chatwrap{height:calc(100vh - 170px)}
+    .msg{max-width:92%}
   }
 </style>
 </head>
@@ -203,7 +173,8 @@
 <div class="top">
   <div class="logo" onclick="location.href='/'"><svg width="24" height="24" style="vertical-align:-7px;margin-right:2px"><use href="#rabbit-icon"/></svg> Carry<span>Pilot</span></div>
   <div class="tabs">
-    <div class="tab on" data-v="rates">📡 <span data-i18n="tabRates">费率现状</span></div>
+    <div class="tab on" data-v="chat">💬 <span data-i18n="tabChat">对话</span></div>
+    <div class="tab" data-v="rates">📡 <span data-i18n="tabRates">费率现状</span></div>
     <div class="tab" data-v="opps">🔬 <span data-i18n="tabOpps">套利机会</span></div>
     <div class="tab" data-v="agents">🤖 Agent</div>
     <div class="tab" data-v="earn">📈 <span data-i18n="tabEarn">收益中心</span></div>
@@ -236,30 +207,27 @@
   <div class="modal" style="width:min(460px,94vw)"><div id="order-body"></div></div>
 </div>
 
-<!-- 浮动对话助手 -->
-<button id="chat-fab" onclick="toggleChat()">💬</button>
-<div id="chat-panel">
-  <div class="chat-hd">
-    <b>🛩️ CarryPilot 助手</b>
-    <span class="dim" style="font-size:11px;margin-left:6px" data-i18n="chatSub">问资费 · 问机会 · 下单</span>
-    <span style="flex:1"></span>
-    <span onclick="toggleChat()" style="cursor:pointer;color:var(--dim)">✕</span>
-  </div>
-  <div id="chat-log"></div>
-  <div class="chat-sug">
-    <span onclick="quickAsk('哪些币费率最高')">哪些币费率最高</span>
-    <span onclick="quickAsk('现在有什么套利机会')">现在有什么套利机会</span>
-    <span onclick="quickAsk('BTC 能套利吗')">BTC 能套利吗</span>
-  </div>
-  <div class="chat-in">
-    <input id="chat-input" placeholder="例：BTC 能套利吗 / 帮我做 1000u BTC" onkeydown="if(event.key==='Enter')sendChat()">
-    <button class="btn" onclick="sendChat()">发送</button>
-  </div>
-</div>
 
 <main>
+  <!-- 对话 -->
+  <div class="view on" id="v-chat">
+    <div class="chatwrap">
+      <div class="chat-tophint">
+        <svg width="30" height="30" style="border-radius:50%"><use href="#rabbit-icon"/></svg>
+        <div><b data-i18n="chatTitle">CarryPilot 助手</b><div class="dim" style="font-size:12px" data-i18n="chatSub">问费率、问机会，确认后可直接下单</div></div>
+      </div>
+      <div class="chat-body" id="chatBody"></div>
+      <div class="suggest" id="chatSuggest"></div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="例如：BTC 现在费率多少 / 帮我做 1000u BTC" data-i18n-ph="chatPh" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn" onclick="sendChat()" data-i18n="chatSend">发送</button>
+      </div>
+      <div class="dim" style="font-size:11px;text-align:center;margin-top:8px" data-i18n="chatDisc">⚠ 研究结论，非投资建议。下单由你确认，风控不可越权。</div>
+    </div>
+  </div>
+
   <!-- 费率现状 -->
-  <div class="view on" id="v-rates">
+  <div class="view" id="v-rates">
     <h2 data-i18n="ratesTitle">费率现状中心</h2>
     <div class="chips">
       <span class="dim" id="rates-meta" style="font-size:12px"></span>
@@ -389,24 +357,6 @@
   <div class="foot" id="disclaimer"></div>
 </main>
 
-<!-- 对话小助手（Maneki 风格悬浮问答，免登录可用） -->
-<button class="chatfab" id="chatFab" onclick="toggleChat()" aria-label="Chat" title="问问 CarryPilot">
-  <svg viewBox="0 0 64 64"><use href="#rabbit-icon"/></svg>
-  <span class="dot"></span>
-</button>
-<div class="chatpanel" id="chatPanel">
-  <div class="chat-hd">
-    <svg width="28" height="28" style="border-radius:50%;background:var(--panel)"><use href="#rabbit-icon"/></svg>
-    <div><b data-i18n="chatTitle">CarryPilot 小助手</b><div class="sub" data-i18n="chatSub">问费率、问机会，秒回卡片</div></div>
-    <button class="x" onclick="toggleChat(false)">✕</button>
-  </div>
-  <div class="chat-body" id="chatBody"></div>
-  <div class="suggest" id="chatSuggest"></div>
-  <div class="chat-input">
-    <input id="chatInput" placeholder="例如：BTC 现在费率多少" data-i18n-ph="chatPh" onkeydown="if(event.key==='Enter')sendChat()">
-    <button class="btn mini" onclick="sendChat()" data-i18n="chatSend">发送</button>
-  </div>
-</div>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -414,7 +364,7 @@ const fmt=(x,d=2)=>(x>=0?'+':'')+Number(x).toFixed(d)+'%';
 const usd=x=>(x<0?'-$':'$')+Math.abs(x).toFixed(2);
 /** 报错文案统一带上 logId（有的话）：出问题时用户把这串码发给我们，一查日志秒定位 */
 const errText=d=>d.error+(d.logId?` (${LANG==='zh'?'错误码':'error id'}: ${d.logId})`:'');
-let SCAN=null, ME=null, FILTER='all', RATE_FILTER='all', SELECTED=null, WORKSPACE='PAPER';
+let SCAN=null, ME=null, FILTER='all', RATE_FILTER='all', SELECTED=null, WORKSPACE='PAPER', chatStarted=false;
 let token=localStorage.getItem('cp_token'), addr=localStorage.getItem('cp_addr');
 let LANG=localStorage.getItem('cp_lang')||'zh';
 
@@ -441,7 +391,7 @@ const I18N={
  wsVirtual:['虚拟盘','Virtual'],wsLive:['实盘','Live'],setVirtual:['虚拟盘账户','Virtual Account'],setVirtualDesc:['虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。','Virtual account for risk-free testing. Set a virtual balance; virtual agents draw from it.'],
  tLongsPay:['多付费','longs pay'],tShortsPay:['空付费','shorts pay'],tElevated:['费率偏高','elevated'],tVolatile:['波动大','volatile'],tWrap:['包装现货','wrapped'],tNoSpot:['仅观察','no spot'],
  agDetail:['Agent 详情','Agent detail'],agConfig:['配置','Config'],agPositions:['交易记录（历史平仓）','Trade history'],agMemory:['沉淀的复盘记忆','Review memory'],viewDetail:['详情/记录','Detail'],
- chatTitle:['CarryPilot 小助手','CarryPilot Assistant'],chatSub:['问费率、问机会，秒回卡片','Ask rates or opportunities, instant cards'],
+ tabChat:['对话','Chat'],chatTitle:['CarryPilot 助手','CarryPilot Assistant'],chatSub:['问费率、问机会，确认后可直接下单','Ask rates/opportunities — confirm to trade'],chatDisc:['⚠ 研究结论，非投资建议。下单由你确认，风控不可越权。','⚠ Research only, not investment advice. Orders need your confirmation.'],
  chatPh:['例如：BTC 现在费率多少','e.g. BTC funding rate now'],chatSend:['发送','Send'],chatGreet:['你好，我是 CarryPilot 小助手 🐰 问我资金费率或套利机会，我给你卡片答案。','Hi, I\'m the CarryPilot assistant 🐰 Ask about funding rates or arbitrage opportunities — I\'ll answer with a card.'],
  chatViewFull:['查看完整分析 →','Full analysis →'],chatMoreTop:['费率最高的几个：','Highest |rate| coins:'],chatMoreAcc:['当前成本后仍为正的机会：','Currently positive-EV opportunities:'],
  s1:['BTC 现在费率多少','BTC funding rate now'],s2:['现在有什么套利机会','Any arbitrage opportunities now'],s3:['ETH 值得做吗','Is ETH worth it'],s4:['费率最高的是哪个','Which coin has the highest rate'],
@@ -470,6 +420,7 @@ function selectTab(v){
   t.classList.add('on'); $('v-'+v).classList.add('on');
   if(location.hash!=='#'+v)history.replaceState(null,'','#'+v);
   if(v==='risk') loadLiveAccount();
+  if(v==='chat') initChat();
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.v));
 if(location.hash&&document.querySelector('.tab[data-v="'+location.hash.slice(1)+'"]'))selectTab(location.hash.slice(1));
@@ -675,6 +626,10 @@ function renderOppDetail(c){
       ${c.tags.map(tagHtml).join(' ')}
       <span style="flex:1"></span><span class="iconbtn" style="cursor:pointer" onclick="selectOpp(${SELECTED})">✕</span>
     </div>
+    ${c.decision==='ACCEPTED'?`<div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+      <button class="btn" onclick="createAgentFor('${c.asset}')">🤖 ${LANG==='zh'?'创建 Agent 跑这个机会':'Create Agent for this'}</button>
+      <button class="btn ghost" onclick="openOrderConfirm('${c.asset}',1000)">💰 ${LANG==='zh'?'直接下单':'Trade now'}</button>
+    </div>`:''}
     <div class="narr">${c.narrative[LANG]}</div>
     <div class="sec-t">${LANG==='zh'?'对冲结构':'Hedge structure'}<span class="tip" data-t="Delta 中性对冲：同时持有价值相等、方向相反的两个仓位。币价上涨时现货腿赚、合约腿亏（反之亦然），两边抵消，剩下的就是纯资金费收入">?</span></div>
     <div class="leg">
@@ -960,6 +915,18 @@ async function loadLiveAccount(){
 }
 
 /* ---------- agent actions ---------- */
+// 从套利机会直接创建 Agent：切到 Agent tab，预填该标的并高亮创建区
+function createAgentFor(asset){
+  if(!token){alert(LANG==='zh'?'请先连接钱包':'Connect wallet first');return}
+  document.querySelector('.tab[data-v="agents"]').click();
+  setTimeout(()=>{
+    const sel=$('c-asset');if(sel){[...sel.options].some(o=>o.value===asset)?sel.value=asset:sel.value='ALL'}
+    $('c-name').value=asset+' 套利';
+    const panel=$('create-panel');
+    if(panel){panel.scrollIntoView({behavior:'smooth',block:'center'});panel.style.boxShadow='0 0 0 2px var(--green)';setTimeout(()=>panel.style.boxShadow='',1500)}
+    $('c-hint').textContent=LANG==='zh'?`已为 ${asset} 预填，确认参数后点「创建并启动」`:`Pre-filled for ${asset}`;
+  },100);
+}
 async function createAgent(){
   const b={name:$('c-name').value,asset:$('c-asset').value,style:$('c-style').value,capitalUsd:Number($('c-cap').value),
            mode:$('c-mode').value,maxRounds:Number($('c-rounds').value),customPrompt:composePrompt()};
@@ -979,17 +946,12 @@ async function closePos(id){
   const d=await r.json();if(d.error)alert(errText(d));loadMe();
 }
 
-/* ---------- 对话小助手 ---------- */
-let chatOpen=false, chatStarted=false;
-function toggleChat(force){
-  chatOpen = typeof force==='boolean' ? force : !chatOpen;
-  $('chatPanel').classList.toggle('on',chatOpen);
-  if(chatOpen && !chatStarted){
-    chatStarted=true;
-    appendMsg('agent', I18N.chatGreet[LANG==='zh'?0:1]);
-    renderChatSuggest();
-    $('chatInput').focus();
-  }
+/* ---------- 对话 tab ---------- */
+function initChat(){
+  if(chatStarted)return;chatStarted=true;
+  appendMsg('agent', I18N.chatGreet[LANG==='zh'?0:1]);
+  renderChatSuggest();
+  const inp=$('chatInput');if(inp)inp.focus();
 }
 function renderChatSuggest(){
   const el=$('chatSuggest');if(!el)return;
@@ -1021,6 +983,13 @@ async function sendChat(){
   appendMsg('user', text.replace(/</g,'&lt;'));
   input.value='';
   $('chatSuggest').innerHTML='';
+  // 下单意图（帮我做/开 + 金额 + 标的）→ 走确认弹窗
+  const oi=parseOrderIntent(text);
+  if(oi&&oi.coin){
+    if(!token){appendMsg('agent', LANG==='zh'?'下单前请先在右上角「连接钱包」。':'Please connect wallet first.');return}
+    appendMsg('agent', LANG==='zh'?`好的，为你准备 ${oi.coin} $${oi.amount} 的下单确认…`:`Preparing order confirmation for ${oi.coin} $${oi.amount}…`);
+    openOrderConfirm(oi.coin,oi.amount);return;
+  }
   const typing=chatTyping();
   let d;
   try{
@@ -1047,18 +1016,20 @@ function chatOppCardHtml(c){
     <div class="row"><b style="font-size:15px">${c.asset}</b><span class="tag ${ok?'t-ok':'t-no'}" style="margin-left:auto">${c.decision}</span></div>
     <div class="big ${c.netApr>=0?'pos':'neg'}">${fmt(c.netApr,1)}</div>
     <div class="dim" style="font-size:12px">${LANG==='zh'?'净APR·扣完成本':'net APR after costs'}</div>
-    <a class="go" onclick="jumpToOpp('${c.asset}')">${I18N.chatViewFull[LANG==='zh'?0:1]}</a>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      ${ok?`<button class="btn mini" onclick="openOrderConfirm('${c.asset}',1000)">💰 ${LANG==='zh'?'下单':'Trade'}</button>`:''}
+      <a class="go" onclick="jumpToOpp('${c.asset}')">${I18N.chatViewFull[LANG==='zh'?0:1]}</a>
+    </div>
   </div>`;
 }
 function jumpToOpp(asset){
-  toggleChat(false);
   document.querySelector('.tab[data-v="opps"]').click();
   setTimeout(()=>{
     const idx=(window._s1||[]).findIndex(c=>c.asset===asset);
     if(idx>=0) selectOpp(idx);
   },80);
 }
-function jumpToRates(){toggleChat(false);document.querySelector('.tab[data-v="rates"]').click()}
+function jumpToRates(){document.querySelector('.tab[data-v="rates"]').click()}
 function renderChatAnswer(d){
   if(d.intent==='arbitrage_opportunity'){
     if(d.found && d.candidate){ appendMsg('agent', d.message); appendMsg('agent', chatOppCardHtml(d.candidate)); return }
@@ -1084,18 +1055,7 @@ function renderChatAnswer(d){
   renderChatSuggest();
 }
 
-/* ---------- 对话助手 + 确认下单（Level 2）---------- */
-let chatInited=false;
-function toggleChat(){
-  const p=$('chat-panel');p.classList.toggle('on');
-  if(p.classList.contains('on')&&!chatInited){chatInited=true;
-    pushMsg('a', LANG==='zh'?'你好，我是 CarryPilot 助手 🛩️\n我能查资金费率、找套利机会，确认后还能帮你下单。试试下面的问题，或直接说「帮我做 1000u BTC」。':'Hi! I can check funding rates, find arbitrage, and place orders on confirm.');
-  }
-}
-function quickAsk(q){$('chat-input').value=q;sendChat()}
-function pushMsg(who,text){const d=document.createElement('div');d.className='msg '+who;d.textContent=text;$('chat-log').appendChild(d);$('chat-log').scrollTop=1e9;return d}
-function pushEl(el){$('chat-log').appendChild(el);$('chat-log').scrollTop=1e9}
-
+/* ---------- 确认下单（Level 2）---------- */
 // 解析下单意图：帮我做/开/buy + 数字 + u/usd + 标的
 function parseOrderIntent(t){
   const m=t.match(/(做|开|下单|buy|open|建仓)[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(u|usd|刀|美金|美元|\$)?/i);
@@ -1103,39 +1063,6 @@ function parseOrderIntent(t){
   const amt=Number(m[2]); if(!amt)return null;
   const coin=(t.toUpperCase().match(/\b(BTC|ETH|SOL|HYPE|PURR|SUI|DOGE|AVAX|LINK|OP|ARB|[A-Z]{2,8})\b/)||[])[1]||null;
   return {amount:amt,coin};
-}
-async function sendChat(){
-  const inp=$('chat-input');const q=inp.value.trim();if(!q)return;inp.value='';
-  pushMsg('u',q);
-  const oi=parseOrderIntent(q);
-  if(oi&&oi.coin){ // 下单意图 → 走确认流程
-    if(!token){pushMsg('a',LANG==='zh'?'下单需要先连接钱包哦，右上角「连接钱包」。':'Please connect wallet first.');return}
-    openOrderConfirm(oi.coin,oi.amount);return;
-  }
-  const typing=pushMsg('a','…');
-  try{
-    const d=await (await fetch('/api/agent/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})})).json();
-    typing.remove();
-    pushMsg('a',d.message||'（无结果）');
-    renderChatCards(d);
-  }catch(e){typing.textContent='查询失败，请重试。'}
-}
-function renderChatCards(d){
-  if(d.intent==='arbitrage_opportunity'){
-    const list=d.accepted||(d.candidate?[d.candidate]:[]);
-    list.filter(c=>c.decision==='ACCEPTED').slice(0,3).forEach(c=>{
-      const el=document.createElement('div');el.className='qcard';
-      el.innerHTML=`<div class="qh"><b>${c.asset}</b><span class="tag t-ok">✔ 有机会</span></div>
-        <div class="qbig pos">${fmt(c.netApr,1)}<span style="font-size:11px;color:var(--dim)"> 净APR</span></div>
-        <div class="dim" style="margin:4px 0">成本覆盖比 ${c.costCoverage.toFixed(2)} · 组合：现货多+永续空</div>
-        <button class="btn mini" onclick="openOrderConfirm('${c.asset}',1000)">💰 ${LANG==='zh'?'下单':'Trade'}</button>`;
-      pushEl(el);
-    });
-  }else if(d.intent==='funding_rates'&&d.top){
-    const el=document.createElement('div');el.className='qcard no';
-    el.innerHTML='<div class="qh"><b>费率 Top</b></div>'+d.top.slice(0,5).map(r=>`<div style="display:flex;justify-content:space-between"><span>${r.coin}${r.hasSpot?' 🔗':''}</span><span class="${r.hourlyFundingPct>=0?'pos':'neg'}">${fmt(r.hourlyFundingPct,4)}/h</span></div>`).join('');
-    pushEl(el);
-  }
 }
 
 // 确认下单弹窗（拉 quote → 展示预期收益/风险 → 确认开仓）
@@ -1176,12 +1103,13 @@ async function confirmOrder(asset,notionalUsd,mode){
   const d=await (await authFetch('/api/agent/order',{method:'POST',body:JSON.stringify({asset,notionalUsd,mode})})).json();
   if(d.error){$('ord-msg').innerHTML=`<span class="neg">${d.error}</span>`;return}
   $('ordermodal').classList.remove('on');
-  pushMsg('a',`✅ ${LANG==='zh'?`已开仓 ${asset} $${notionalUsd}（${mode==='LIVE'?'实盘':'虚拟盘'}）。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${asset} $${notionalUsd}.`}`);
+  if(chatStarted) appendMsg('agent',`✅ ${LANG==='zh'?`已开仓 ${asset} $${notionalUsd}（${mode==='LIVE'?'实盘':'虚拟盘'}）。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${asset} $${notionalUsd}.`}`);
   loadMe();
 }
 
 /* ---------- boot ---------- */
 renderAuth();applyLang();applyTpl();
+if((location.hash.slice(1)||'chat')==='chat') initChat();  // 默认对话 tab
 loadScan(true).then(()=>{
   const sel=$('c-asset');
   (SCAN?.candidates||[]).filter(c=>c.strategy==='S1_SPOT_PERP').forEach(c=>{const o=document.createElement('option');o.value=c.asset;o.textContent=c.asset;sel.appendChild(o)});
