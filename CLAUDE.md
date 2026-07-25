@@ -30,7 +30,7 @@
 
 ## 硬性规则
 
-0. **本仓库在 GitHub 公开**（github.com/OneHaydenZhang/KuroAI-INJ）：任何隐私数据（密钥、地址+持仓、交易记录、Telegram token/chat id、服务器信息）永不入库；commit 前自查 diff。git 提交者为用户本人身份（OneHaydenZhang），commit message 不加 AI 署名
+0. **本仓库在 GitHub 公开**（github.com/OneHaydenZhang/KuroAI-INJ）：任何隐私数据（密钥、地址+持仓、交易记录、Telegram token/chat id、服务器信息）永不入库；commit 前自查 diff。git 提交者为用户本人身份（OneHaydenZhang），commit message 不加 AI 署名。**云端（服务器 / Telegram 桥）上的任何代码或文档改动，完成后必须 `git commit` 并 `git push origin main`——改动要落到 GitHub，不能只留在服务器**（Telegram 桥已有确定性 autoSync 自动兜底，但手动操作也遵此规则）
 1. **资金安全**：LLM 输出永远只是「建议」，仓位/限额/止损由确定性 RiskGuard 代码强制；金额用 string/bigint/decimal，禁止 float
 2. **密钥**：私钥/API key 只从 env 读取；`.env` 不入库；日志脱敏
 3. **网络**：mainnet-first；端点/chainId 只通过 env 切换，不硬编码

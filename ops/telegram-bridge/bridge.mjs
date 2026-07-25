@@ -36,10 +36,46 @@ async function send(chatId, text) {
   }
 }
 
-import { spawn } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
 
 let busy = false;
 let continueSession = true; // false = 下一条消息开新会话
+
+// 确定性 git 同步：每次 Telegram 编辑后自动 commit + push，保证云端改动一定上 GitHub，
+// 而不仅停留在服务器。提交者身份取自 git config（用户本人），不加 AI 署名（硬性规则 0）。
+function git(args) {
+  return new Promise((resolve) => {
+    execFile('git', ['-C', PROJECT_DIR, ...args], { maxBuffer: 1 << 20 }, (e, so, se) =>
+      resolve({ code: e ? (e.code ?? 1) : 0, out: (so || '').trim(), err: (se || '').trim() }),
+    );
+  });
+}
+
+async function autoSync(prompt) {
+  try {
+    await git(['add', '-A']);
+    const staged = await git(['diff', '--cached', '--name-only']);
+    if (staged.out) {
+      const subject = 'tg: ' + prompt.replace(/\s+/g, ' ').trim().slice(0, 60);
+      const c = await git(['commit', '-m', subject]);
+      if (c.code !== 0) return `⚠️ 提交失败：${(c.err || c.out).slice(-300)}`;
+    }
+    // 是否领先远端（含本轮或 Claude 已提交但未推送的情况）
+    const ahead = await git(['rev-list', '--count', '@{u}..HEAD']);
+    if (ahead.code !== 0 || (ahead.out || '0') === '0') return null; // 无东西可推
+    let p = await git(['push']);
+    if (p.code !== 0) {
+      await git(['pull', '--rebase', '--autostash']);
+      p = await git(['push']);
+    }
+    const head = (await git(['rev-parse', '--short', 'HEAD'])).out;
+    return p.code === 0
+      ? `🔄 已同步 GitHub (${head})`
+      : `⚠️ 已提交但推送失败：${(p.err || p.out).slice(-300)}`;
+  } catch (e) {
+    return `⚠️ 同步异常：${String(e).slice(0, 200)}`;
+  }
+}
 
 function runClaude(prompt, chatId) {
   return new Promise((resolve) => {
@@ -100,7 +136,8 @@ async function handle(msg) {
   await api('sendChatAction', { chat_id: chatId, action: 'typing' });
   try {
     const reply = await runClaude(text, chatId);
-    await send(chatId, reply);
+    const sync = await autoSync(text);
+    await send(chatId, sync ? `${reply}\n\n${sync}` : reply);
   } catch (e) {
     await send(chatId, `[bridge error] ${String(e).slice(0, 500)}`);
   } finally {
