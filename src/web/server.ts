@@ -10,7 +10,7 @@ import { buildS1Candidates, ENGINE_VERSION, CONFIG, setDemo, demoFundingFor, typ
 import { loadStore, saveStore, store, virtualBalanceOf, setVirtualBalance } from '../core/store.js';
 import { tickAgents, closePosition, viewPosition, buildManualPosition, STYLE_PARAMS, LIMITS, type LiveExecutor } from '../core/agents.js';
 import { llmEnabled } from '../core/llm.js';
-import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINTS } from '../core/points.js';
+import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, treasuryEvm, POINT_PRESETS, POINTS } from '../core/points.js';
 import { buildApproveAgentTypedData, submitApproveAgent, liveOpenCarry, liveCloseCarry, fetchLiveAccount, getOrCreateAgentWallet } from '../connectors/hlExchange.js';
 import { agentCard, classify, answerRates, answerOpportunities, handleA2A } from './agentApi.js';
 import { handleMcpRequest } from './mcpServer.js';
@@ -274,7 +274,7 @@ const server = createServer(async (req, res) => {
         virtualBalance: virtualBalanceOf(owner),
         live: { agentAddress: wallet?.agentAddress ?? null, approved: Boolean(wallet?.approvedAt) },
         summary: { PAPER: summaryFor('PAPER'), LIVE: summaryFor('LIVE') },
-        points: { balance: balanceOf(owner), perTick: POINTS.perTick, rateInj: POINTS.rateInj, treasury: treasuryInj(), depositFromInj: (await import('../lib/bech32.js')).ethToInj(owner) },
+        points: { balance: balanceOf(owner), perTick: POINTS.perTick, rateInj: POINTS.rateInj, configured: Boolean(treasuryInj()), presets: POINT_PRESETS, treasuryEvm: treasuryEvm() },
       });
     }
 

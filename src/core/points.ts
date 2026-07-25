@@ -1,6 +1,6 @@
 import { store, saveStore } from './store.js';
 import { config } from '../config.js';
-import { ethToInj } from '../lib/bech32.js';
+import { ethToInj, injToEth } from '../lib/bech32.js';
 import { log } from '../lib/logger.js';
 
 /**
@@ -23,6 +23,14 @@ export function treasuryInj(): string {
   if (!t) return '';
   return t.startsWith('0x') ? ethToInj(t) : t;
 }
+/** 金库对应的 EVM 0x 地址（用于 Injective EVM 原生转账；仅用于构造交易，不在 UI 展示） */
+export function treasuryEvm(): string {
+  const t = POINTS.treasury;
+  if (!t) return '';
+  return t.startsWith('0x') ? t.toLowerCase() : injToEth(t);
+}
+/** 充值套餐（积分档位） */
+export const POINT_PRESETS = (process.env.POINTS_PRESETS ?? '1,10,50,100').split(',').map(Number).filter((n) => n > 0);
 
 export function balanceOf(address: string): number {
   return store.points[address.toLowerCase()] ?? 0;

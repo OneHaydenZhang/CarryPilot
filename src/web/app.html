@@ -228,6 +228,50 @@
   <div class="modal" style="width:min(460px,94vw)"><div id="order-body"></div></div>
 </div>
 
+<!-- 创建 Agent 弹窗 -->
+<div class="modal-bg" id="createmodal" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="modal" style="width:min(560px,95vw);max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;margin-bottom:12px">
+      <b style="font-size:17px" data-i18n="createAgent">创建新 Agent</b>
+      <span id="cm-mode" class="tag t-paper" style="margin-left:10px"></span>
+      <span style="flex:1"></span>
+      <span class="iconbtn" style="cursor:pointer" onclick="$('createmodal').classList.remove('on')">✕</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+      <div><label data-i18n="lName">名称</label><input id="c-name" placeholder="My Carry Agent" style="width:100%"></div>
+      <div><label data-i18n="lAsset">检测标的</label><select id="c-asset" style="width:100%"><option value="ALL" data-i18n="oAll">全市场自动选</option></select></div>
+      <div><label data-i18n="lStyle">风格<span class="tip" data-t="决定入场门槛与仓位比例：保守=净APR≥15%才进、用30%资金；均衡=≥8%、50%；激进=≥4%、80%">?</span></label><select id="c-style" style="width:100%">
+        <option value="conservative">🛡 保守 Conservative</option>
+        <option value="balanced" selected>⚖️ 均衡 Balanced</option>
+        <option value="aggressive">🔥 激进 Aggressive</option></select></div>
+      <div><label data-i18n="lCap">资金 (USD)</label><input id="c-cap" type="number" value="1000" style="width:100%"></div>
+      <div><label data-i18n="lRounds">回合数<span class="tip" data-t="Agent 的生命周期：每 10 分钟消耗 1 回合（同时消耗积分），用尽后自动平仓并停止。内测期间上限 120 回合（约 20 小时）">?</span></label><input id="c-rounds" type="number" value="120" min="10" max="120" style="width:100%"></div>
+    </div>
+    <label data-i18n="lTpl">LLM 决策偏好（结构化模板，Agent 开仓前会请 LLM 按此评估）</label>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+      <div><select id="c-tpl" style="width:100%" onchange="applyTpl()">
+        <option value="none" data-i18n="tplNone">默认（无额外偏好）</option>
+        <option value="blue">🏦 稳健蓝筹 — 只做主流币</option>
+        <option value="momentum">📈 费率动量 — 只做费率上行</option>
+        <option value="strict">🚫 严格风控 — 低置信一律否决</option>
+        <option value="custom" data-i18n="tplCustom">✏️ 自定义</option></select></div>
+      <div><input id="c-prefer" placeholder="偏好标的（如：仅 BTC/ETH/SOL/HYPE）" style="width:100%" disabled></div>
+      <div><input id="c-avoid" placeholder="回避条件（如：meme 币、wrapper 资产）" style="width:100%" disabled></div>
+      <div><select id="c-conf" style="width:100%" disabled>
+        <option value="0.5">最低置信度 0.5（宽松）</option>
+        <option value="0.7" selected>最低置信度 0.7（标准）</option>
+        <option value="0.85">最低置信度 0.85（严格）</option></select></div>
+    </div>
+    <input type="hidden" id="c-mode" value="PAPER">
+    <div class="dim" style="font-size:11px;margin-top:8px" data-i18n="tplNote">系统已内置风控 system prompt（LLM 不能建议加杠杆、不能改数值、风控优先），你的偏好只在此框架内生效。</div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+      <button class="btn" onclick="createAgent()" data-i18n="createRun">创建并启动</button>
+      <button class="btn ghost" onclick="$('createmodal').classList.remove('on')" data-i18n="cancel">取消</button>
+      <span class="dim" id="c-hint" style="font-size:12px"></span>
+    </div>
+  </div>
+</div>
+
 
 <main>
   <!-- 对话 -->
@@ -304,37 +348,8 @@
     <div class="panel" id="fuel-banner" style="display:none;border-color:var(--amber)"></div>
     <div class="cards" id="agent-stats"></div>
     <div class="panel" id="need-login-agents" style="display:none" data-i18n="needLogin">请先连接钱包。</div>
-    <div class="panel" id="create-panel" style="display:none">
-      <b data-i18n="createAgent">创建新 Agent</b>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px">
-        <div><label data-i18n="lName">名称</label><input id="c-name" placeholder="My Carry Agent" style="width:100%"></div>
-        <div><label data-i18n="lAsset">检测标的</label><select id="c-asset" style="width:100%"><option value="ALL" data-i18n="oAll">全市场自动选</option></select></div>
-        <div><label data-i18n="lStyle">风格<span class="tip" data-t="决定入场门槛与仓位比例：保守=净APR≥15%才进、用30%资金；均衡=≥8%、50%；激进=≥4%、80%">?</span></label><select id="c-style" style="width:100%">
-          <option value="conservative">🛡 保守 Conservative</option>
-          <option value="balanced" selected>⚖️ 均衡 Balanced</option>
-          <option value="aggressive">🔥 激进 Aggressive</option></select></div>
-        <div><label data-i18n="lCap">资金 (USD)</label><input id="c-cap" type="number" value="1000" style="width:100%"></div>
-        <div><label data-i18n="lRounds">回合数<span class="tip" data-t="Agent 的生命周期：每 10 分钟消耗 1 回合（同时消耗积分），用尽后自动平仓并停止。内测期间上限 120 回合（约 20 小时）">?</span></label><input id="c-rounds" type="number" value="120" min="10" max="120" style="width:100%"></div>
-        <div><label data-i18n="lMode">模式</label><select id="c-mode" style="width:100%"><option value="PAPER">🧪 虚拟盘</option><option value="LIVE">⚡ 实盘</option></select></div>
-      </div>
-      <label data-i18n="lTpl">LLM 决策偏好（结构化模板，Agent 开仓前会请 LLM 按此评估）</label>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
-        <div><select id="c-tpl" style="width:100%" onchange="applyTpl()">
-          <option value="none" data-i18n="tplNone">默认（无额外偏好）</option>
-          <option value="blue">🏦 稳健蓝筹 — 只做主流币</option>
-          <option value="momentum">📈 费率动量 — 只做费率上行</option>
-          <option value="strict">🚫 严格风控 — 低置信一律否决</option>
-          <option value="custom" data-i18n="tplCustom">✏️ 自定义</option></select></div>
-        <div><input id="c-prefer" placeholder="偏好标的（如：仅 BTC/ETH/SOL/HYPE）" style="width:100%" disabled></div>
-        <div><input id="c-avoid" placeholder="回避条件（如：meme 币、wrapper 资产）" style="width:100%" disabled></div>
-        <div><select id="c-conf" style="width:100%" disabled>
-          <option value="0.5">最低置信度 0.5（宽松）</option>
-          <option value="0.7" selected>最低置信度 0.7（标准）</option>
-          <option value="0.85">最低置信度 0.85（严格）</option></select></div>
-      </div>
-      <div class="dim" style="font-size:11px;margin-top:6px" data-i18n="tplNote">系统已内置风控 system prompt（LLM 不能建议加杠杆、不能改数值、风控优先），你的偏好只在此框架内生效。</div>
-      <div style="margin-top:12px"><button class="btn" onclick="createAgent()" data-i18n="createRun">创建并启动</button>
-      <span class="dim" id="c-hint" style="margin-left:10px;font-size:12px"></span></div>
+    <div id="create-bar" style="display:none;margin:6px 0 16px">
+      <button class="btn" onclick="openCreateAgent()" style="font-size:15px;padding:11px 24px">+ <span data-i18n="createAgent">创建新 Agent</span></button>
     </div>
     <div id="agents-list"></div>
   </div>
@@ -417,7 +432,7 @@ const I18N={
  riskTitle:['风险中心','Risk Center'],riskSub:['持仓风险分级 + 未来 48h 三情景 PnL 预测。Agent 依据同一套规则自动清仓或调仓。','Risk levels + 48h scenario projection; agents act on the same rules.'],
  liveObs:['实盘账户观测','Live Account'],liveObsHint:['连接钱包并完成实盘授权后展示。','Shown after live approval.'],
  tabSet:['设置','Settings'],setTitle:['设置','Settings'],setSub:['账户连接、虚拟盘资金、交易授权与燃料充值。','Account, virtual balance, authorization & fuel.'],setWallet:['钱包','Wallet'],
- wsVirtual:['虚拟盘','Virtual'],wsLive:['实盘','Live'],setVirtual:['虚拟盘账户','Virtual Account'],setVirtualDesc:['虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。','Virtual account for risk-free testing. Set a virtual balance; virtual agents draw from it.'],
+ cancel:['取消','Cancel'],wsVirtual:['虚拟盘','Virtual'],wsLive:['实盘','Live'],setVirtual:['虚拟盘账户','Virtual Account'],setVirtualDesc:['虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。','Virtual account for risk-free testing. Set a virtual balance; virtual agents draw from it.'],
  tLongsPay:['多付费','longs pay'],tShortsPay:['空付费','shorts pay'],tElevated:['费率偏高','elevated'],tVolatile:['波动大','volatile'],tWrap:['包装现货','wrapped'],tNoSpot:['仅观察','no spot'],
  agDetail:['Agent 详情','Agent detail'],agConfig:['配置','Config'],agPositions:['交易记录（历史平仓）','Trade history'],agMemory:['沉淀的复盘记忆','Review memory'],viewDetail:['详情/记录','Detail'],
  tabChat:['对话','Chat'],chatTitle:['CarryPilot 助手','CarryPilot Assistant'],chatSub:['问费率、问机会，确认后可直接下单','Ask rates/opportunities — confirm to trade'],chatDisc:['⚠ 研究结论，非投资建议。下单由你确认，风控不可越权。','⚠ Research only, not investment advice. Orders need your confirmation.'],
@@ -513,7 +528,17 @@ async function connectWith(i){
 function renderAuth(){
   $('connectBtn').textContent = addr ? addr.slice(0,6)+'…'+addr.slice(-4) : I18N.connect[LANG==='zh'?0:1];
   $('need-login-agents').style.display = addr?'none':'block';
-  $('create-panel').style.display = addr?'block':'none';
+  $('create-bar').style.display = addr?'block':'none';
+}
+function openCreateAgent(prefillAsset){
+  if(!token){alert(LANG==='zh'?'请先连接钱包':'Connect wallet first');return}
+  $('c-mode').value=WORKSPACE;
+  $('cm-mode').className='tag '+(WORKSPACE==='LIVE'?'t-live':'t-paper');
+  $('cm-mode').textContent=WORKSPACE==='LIVE'?(LANG==='zh'?'⚡ 实盘':'⚡ LIVE'):(LANG==='zh'?'🧪 虚拟盘':'🧪 VIRTUAL');
+  $('c-name').value='';$('c-cap').value='1000';$('c-rounds').value='120';$('c-hint').textContent='';
+  $('c-tpl').value='none';applyTpl();
+  const sel=$('c-asset');if(sel&&prefillAsset){[...sel.options].some(o=>o.value===prefillAsset)?sel.value=prefillAsset:sel.value='ALL';$('c-name').value=prefillAsset+' 套利'}else if(sel)sel.value='ALL';
+  $('createmodal').classList.add('on');
 }
 const authFetch=(u,opt={})=>fetch(u,{...opt,headers:{...(opt.headers||{}),'Content-Type':'application/json',Authorization:'Bearer '+token}});
 
@@ -731,7 +756,7 @@ function renderFuel(){
 }
 function renderSettings(){
   $('set-wallet').innerHTML=addr
-    ?`${LANG==='zh'?'已连接':'Connected'}: <code>${addr}</code><br><span class="dim" style="font-size:12px">Injective ${LANG==='zh'?'原生地址':'native'}: <code>${ME.points.depositFromInj}</code></span>`
+    ?`${LANG==='zh'?'已连接':'Connected'}: <code>${addr.slice(0,6)}…${addr.slice(-4)}</code>`
     :(LANG==='zh'?'未连接钱包':'Not connected');
 }
 function renderVirtual(){
@@ -913,62 +938,65 @@ function renderRisk(){
   });
 }
 
-/* ---------- points / live ---------- */
-const injScan=a=>`https://injscan.com/account/${a}/`;
-function copyTxt(t,el){navigator.clipboard&&navigator.clipboard.writeText(t);if(el){const o=el.textContent;el.textContent='✓';setTimeout(()=>el.textContent=o,1000)}}
-const PT_PRESETS=[1,10,50,100];
+/* ---------- points / live（隐蔽式充值：一键钱包转账，不暴露任何地址）---------- */
+const INJ_EVM_CHAIN='0x6f0'; // 1776
 function renderPoints(){
   const p=ME.points;const chip=$('pointsChip');
   chip.style.display='inline-flex';chip.textContent='⚡ '+p.balance.toFixed(1);
-  const presets=PT_PRESETS.map(pts=>{const inj=(pts/p.rateInj);return `<div class="ptpreset" onclick="pickPreset(${pts},${inj})"><div class="p1">${pts} ${LANG==='zh'?'积分':'pts'}</div><div class="p2">${inj} INJ</div></div>`}).join('');
+  const presets=(p.presets||[]).map(pts=>{const inj=(pts/p.rateInj);return `<button class="ptpreset" onclick="depositCredits(${pts},${inj},this)"><div class="p1">+${pts} ${LANG==='zh'?'积分':'pts'}</div><div class="p2">${inj} INJ</div></button>`}).join('');
   $('points-panel').innerHTML=`
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px">
-      <div><div class="dim" style="font-size:11px">${LANG==='zh'?'当前余额':'Balance'}</div><div style="font-size:24px;font-weight:800">⚡ ${p.balance.toFixed(1)}</div></div>
-      <div class="dim" style="font-size:12px">${LANG==='zh'?`消耗 ${p.perTick}/回合 · 汇率 1 INJ = ${p.rateInj} 积分`:`${p.perTick}/round · 1 INJ = ${p.rateInj} pts`}</div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+      <div><div class="dim" style="font-size:11px">${LANG==='zh'?'当前余额':'Balance'}</div><div style="font-size:26px;font-weight:800">⚡ ${p.balance.toFixed(1)}</div></div>
+      <div class="dim" style="font-size:12px">${LANG==='zh'?`每回合消耗 ${p.perTick} · 1 INJ = ${p.rateInj} 积分`:`${p.perTick}/round · 1 INJ = ${p.rateInj} pts`}</div>
     </div>
-    ${p.treasury?`
-    <div class="sec-t">${LANG==='zh'?'① 选择充值套餐':'① Pick a package'}</div>
+    ${p.configured?`
+    <div class="dim" style="font-size:12.5px;margin-bottom:8px">${LANG==='zh'?'选择套餐 → 钱包弹出确认转账，到账后自动入积分。':'Pick an amount — your wallet opens to send INJ; credited automatically.'}</div>
     <div class="ptpresets">${presets}</div>
-    <div class="sec-t">${LANG==='zh'?'② 向金库地址转入原生 INJ（Injective 链）':'② Send native INJ to treasury'}</div>
-    <div class="ptaddr">
-      <div><span class="dim">${LANG==='zh'?'金库收款地址':'Treasury'}</span>
-        <code>${p.treasury}</code>
-        <span class="cbtn" onclick="copyTxt('${p.treasury}',this)">复制</span>
-        <a class="ext" href="${injScan(p.treasury)}" target="_blank">浏览器 ↗</a></div>
-      <div><span class="dim">${LANG==='zh'?'请从你的 Injective 地址转出':'From your inj address'}</span>
-        <code>${p.depositFromInj}</code>
-        <span class="cbtn" onclick="copyTxt('${p.depositFromInj}',this)">复制</span>
-        <a class="ext" href="${injScan(p.depositFromInj)}" target="_blank">浏览器 ↗</a></div>
-    </div>
-    <div id="pt-pick" class="dim" style="font-size:12px;margin:8px 0"></div>
-    <button class="btn ghost mini" onclick="refreshPoints(this)">${LANG==='zh'?'③ 我已转账，扫描到账':'③ Scan deposits'}</button> <span id="pt-msg" class="dim" style="font-size:12px"></span>
-    <div class="sec-t">${LANG==='zh'?'充值记录':'Deposit history'} <span class="dim" style="font-size:11px;cursor:pointer" onclick="loadPtHistory()">↻</span></div>
+    <div id="pt-msg" class="dim" style="font-size:12.5px;margin-top:8px;min-height:18px"></div>
+    <div class="sec-t">${LANG==='zh'?'积分流水':'Credit ledger'} <span class="dim" style="font-size:11px;cursor:pointer" onclick="loadPtHistory()">↻</span></div>
     <div id="pt-history" class="dim" style="font-size:12px">${LANG==='zh'?'加载中…':'loading…'}</div>`
-    :`<span class="t-warn tag">${LANG==='zh'?'金库未配置 — 当前仅体验积分':'Treasury not configured — trial credits only'}</span>`}`;
-  if(p.treasury) loadPtHistory();
+    :`<span class="t-warn tag">${LANG==='zh'?'INJ 充值尚未配置（待运营方设置）':'INJ top-up not configured yet'}</span>`}`;
+  if(p.configured) loadPtHistory();
 }
-function pickPreset(pts,inj){
-  const el=$('pt-pick');if(el)el.innerHTML=`👉 ${LANG==='zh'?`充 <b>${pts}</b> 积分 = 转 <b>${inj} INJ</b> 到金库地址。转账后点下方「扫描到账」。`:`Send <b>${inj} INJ</b> for <b>${pts}</b> credits, then scan.`}`;
+// 一键充值：拉起 MetaMask，向金库（EVM 0x，地址不展示）转原生 INJ，然后扫描入账
+async function depositCredits(pts,inj,btn){
+  const msg=$('pt-msg');
+  if(!eth){eth=providers[0]?.provider||window.ethereum}
+  if(!eth){if(msg)msg.textContent=LANG==='zh'?'请先连接钱包':'Connect wallet first';return}
+  const to=ME.points.treasuryEvm;
+  if(!to){if(msg)msg.textContent=LANG==='zh'?'充值暂未开放':'Top-up unavailable';return}
+  btn.disabled=true;if(msg){msg.style.color='';msg.textContent=LANG==='zh'?'请在钱包中确认转账…':'Confirm in your wallet…'}
+  try{
+    // 确保在 Injective EVM (1776)
+    const cid=await eth.request({method:'eth_chainId'});
+    if(cid!==INJ_EVM_CHAIN){
+      try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:INJ_EVM_CHAIN}]});}
+      catch(e){await eth.request({method:'wallet_addEthereumChain',params:[{chainId:INJ_EVM_CHAIN,chainName:'Injective EVM',nativeCurrency:{name:'Injective',symbol:'INJ',decimals:18},rpcUrls:['https://sentry.evm-rpc.injective.network/'],blockExplorerUrls:['https://blockscout.injective.network/']}]});}
+    }
+    // value = inj * 1e18（用字符串避免精度问题）
+    const wei=BigInt(Math.round(inj*1e6))*(10n**12n);
+    const tx=await eth.request({method:'eth_sendTransaction',params:[{from:addr,to,value:'0x'+wei.toString(16)}]});
+    if(msg)msg.textContent=LANG==='zh'?'转账已提交，正在确认入账…':'Sent, crediting…';
+    // 轮询扫描入账
+    let credited=false;
+    for(let i=0;i<6&&!credited;i++){await new Promise(r=>setTimeout(r,4000));
+      const d=await (await authFetch('/api/points/refresh',{method:'POST'})).json();
+      if(d.credited){credited=true;if(msg){msg.style.color='var(--green)';msg.textContent=`✅ ${LANG==='zh'?'充值成功':'done'} +${d.creditedPoints.toFixed(0)}`}loadMe()}}
+    if(!credited&&msg)msg.textContent=LANG==='zh'?'转账已发送，稍后点 ↻ 刷新积分即可入账':'Sent — tap ↻ shortly to credit';
+  }catch(e){if(msg){msg.textContent=(LANG==='zh'?'已取消或失败：':'cancelled/failed: ')+String(e.message||e).slice(0,80)}}
+  finally{btn.disabled=false}
 }
 async function loadPtHistory(){
   const el=$('pt-history');if(!el)return;
   try{
     const d=await (await authFetch('/api/points')).json();
     const rows=(d.history||[]).filter(h=>h.kind!=='tick').slice(0,20);
-    el.innerHTML=rows.length?`<div style="overflow-x:auto"><table><thead><tr><th>${LANG==='zh'?'时间':'Time'}</th><th>${LANG==='zh'?'类型':'Type'}</th><th>${LANG==='zh'?'积分':'Pts'}</th><th>Tx</th></tr></thead><tbody>${rows.map(h=>`<tr>
+    el.innerHTML=rows.length?`<div style="overflow-x:auto"><table><thead><tr><th>${LANG==='zh'?'时间':'Time'}</th><th>${LANG==='zh'?'类型':'Type'}</th><th>${LANG==='zh'?'积分':'Credits'}</th></tr></thead><tbody>${rows.map(h=>`<tr>
       <td class="dim">${new Date(h.at).toLocaleString()}</td>
-      <td>${h.kind==='deposit'?'💰 '+(LANG==='zh'?'充值':'deposit'):h.kind==='welcome'?'🎁 '+(LANG==='zh'?'赠送':'welcome'):h.kind}</td>
-      <td class="${h.points>=0?'pos':'neg'}">${h.points>=0?'+':''}${h.points.toFixed(1)}</td>
-      <td>${h.txhash?`<a class="ext" href="https://injscan.com/transaction/${h.txhash}/" target="_blank">${h.txhash.slice(0,8)}…</a>`:'—'}</td></tr>`).join('')}</tbody></table></div>`
-      :`<span>${LANG==='zh'?'暂无充值记录':'No deposits yet'}</span>`;
+      <td>${h.kind==='deposit'?'💰 '+(LANG==='zh'?'充值':'top-up'):h.kind==='welcome'?'🎁 '+(LANG==='zh'?'赠送':'welcome'):h.kind}</td>
+      <td class="${h.points>=0?'pos':'neg'}">${h.points>=0?'+':''}${h.points.toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`
+      :`<span>${LANG==='zh'?'暂无记录':'No records yet'}</span>`;
   }catch(e){el.textContent='加载失败'}
-}
-async function refreshPoints(btn){
-  btn.disabled=true;$('pt-msg').textContent='…';
-  const d=await (await authFetch('/api/points/refresh',{method:'POST'})).json();
-  btn.disabled=false;
-  $('pt-msg').textContent=d.error?('失败: '+errText(d)):(d.credited?`✅ +${d.creditedPoints.toFixed(0)}`:(LANG==='zh'?'未发现新转账':'no new transfers'));
-  loadMe();
 }
 function renderLiveSetup(){
   const el=$('live-setup');
@@ -998,24 +1026,16 @@ async function loadLiveAccount(){
 
 /* ---------- agent actions ---------- */
 // 从套利机会直接创建 Agent：切到 Agent tab，预填该标的并高亮创建区
-function createAgentFor(asset){
-  if(!token){alert(LANG==='zh'?'请先连接钱包':'Connect wallet first');return}
-  document.querySelector('.tab[data-v="agents"]').click();
-  setTimeout(()=>{
-    const sel=$('c-asset');if(sel){[...sel.options].some(o=>o.value===asset)?sel.value=asset:sel.value='ALL'}
-    $('c-name').value=asset+' 套利';
-    const panel=$('create-panel');
-    if(panel){panel.scrollIntoView({behavior:'smooth',block:'center'});panel.style.boxShadow='0 0 0 2px var(--green)';setTimeout(()=>panel.style.boxShadow='',1500)}
-    $('c-hint').textContent=LANG==='zh'?`已为 ${asset} 预填，确认参数后点「创建并启动」`:`Pre-filled for ${asset}`;
-  },100);
-}
+function createAgentFor(asset){ openCreateAgent(asset); }
 async function createAgent(){
   const b={name:$('c-name').value,asset:$('c-asset').value,style:$('c-style').value,capitalUsd:Number($('c-cap').value),
            mode:$('c-mode').value,maxRounds:Number($('c-rounds').value),customPrompt:composePrompt()};
   const r=await authFetch('/api/agents',{method:'POST',body:JSON.stringify(b)});
   const d=await r.json();
   if(d.error){$('c-hint').textContent=d.error;return}
-  $('c-hint').textContent=LANG==='zh'?'✅ 已创建，下一回合开始决策':'✅ Created';loadMe();
+  $('c-hint').textContent=LANG==='zh'?'✅ 已创建':'✅ Created';
+  setTimeout(()=>$('createmodal').classList.remove('on'),500);
+  loadMe();
 }
 async function agentAction(id,action){
   if(action==='delete'&&!confirm('Delete?'))return;

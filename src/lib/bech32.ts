@@ -38,6 +38,25 @@ function convertBits(data: number[], from: number, to: number): number[] {
   return out;
 }
 
+/** inj1... → 0x（同一 20 字节账户，用于 Injective EVM 原生转账） */
+export function injToEth(injAddress: string): string {
+  const addr = injAddress.trim().toLowerCase();
+  if (!addr.startsWith('inj1')) throw new Error('bad inj address');
+  const data = addr.slice(4, -6); // 去掉 hrp 'inj1' 前缀与 6 位校验和
+  const words = [...data].map((c) => {
+    const i = CHARSET.indexOf(c);
+    if (i < 0) throw new Error('bad bech32 char');
+    return i;
+  });
+  const bytes = convertBits(words, 5, 8);
+  // convertBits 5→8 会在末尾产生一个填充位，取前 20 字节
+  const hex = bytes
+    .slice(0, 20)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return '0x' + hex;
+}
+
 export function ethToInj(ethAddress: string): string {
   const hex = ethAddress.replace(/^0x/i, '').toLowerCase();
   if (!/^[0-9a-f]{40}$/.test(hex)) throw new Error('bad eth address');
