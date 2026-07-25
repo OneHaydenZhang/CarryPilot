@@ -102,7 +102,6 @@
   .wopt b{font-size:14px}
   /* 移动端 */
   @media(max-width:760px){
-  @media(max-width:760px){
     html,body{overflow-x:hidden;max-width:100vw}
     main{padding:12px;overflow-x:hidden}
     .top{padding:10px 12px;gap:8px}
@@ -122,30 +121,52 @@
     .legbox{min-width:0}
     .modal{padding:18px}
   }
-  /* 对话 tab */
-  .chatwrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:440px}
-  .chat-tophint{display:flex;align-items:center;gap:12px;padding:0 4px 14px;border-bottom:1px solid var(--border);margin-bottom:12px}
-  .chat-tophint b{font-size:16px}
-  .chat-body{flex:1;min-height:0;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:14px}
-  .msg{display:flex;gap:8px;max-width:82%;flex-shrink:0}
+  /* 对话 tab（大气版，参考 Maneki） */
+  .chatwrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px;height:calc(100vh - 128px);min-height:480px}
+  .chat-head{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .chat-head .rb{width:44px;height:44px;flex:0 0 auto}
+  .chat-head h3{font-size:18px;font-weight:800}
+  .chat-head .sub{color:var(--dim);font-size:13px;margin-top:2px}
+  .chat-market{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .cm-cell{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;min-width:88px}
+  .cm-cell .k{font-size:11px;color:var(--dim)}
+  .cm-cell .v{font-size:14px;font-weight:800}
+  .chat-body{flex:1;min-height:0;overflow-y:auto;padding:6px 2px;display:flex;flex-direction:column;gap:16px}
+  .chat-empty{margin:auto;text-align:center;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:16px;padding:30px 20px}
+  .chat-empty .mascot{width:110px;height:110px;filter:drop-shadow(0 12px 34px rgba(46,230,168,.28))}
+  .chat-empty h3{font-size:19px;font-weight:800}
+  .chat-empty p{color:var(--dim);font-size:14px;line-height:1.7}
+  .msg{display:flex;gap:10px;max-width:80%;flex-shrink:0}
   .msg.user{align-self:flex-end;flex-direction:row-reverse}
-  .msg .av{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--border);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
-  .msg .av svg{width:16px;height:16px}
-  .msg .bub{background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:9px 13px;font-size:13px;line-height:1.6}
+  .msg .av{width:30px;height:30px;border-radius:50%;background:var(--panel2);border:1px solid var(--border);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .msg .av svg{width:20px;height:20px}
+  .msg .bub{background:var(--panel2);border:1px solid var(--border);border-radius:16px;padding:12px 16px;font-size:14.5px;line-height:1.65}
   .msg.user .bub{background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;font-weight:600;border:none}
   .msg.agent .bub{max-width:100%}
-  .chat-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:6px;min-width:210px}
+  .chat-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:8px;min-width:230px}
   .chat-card .row{display:flex;align-items:center;gap:8px}
-  .chat-card .big{font-size:20px;font-weight:800;margin:4px 0}
-  .chat-card .go{display:inline-block;margin-top:6px;font-size:12px;color:var(--blue);cursor:pointer;text-decoration:none}
-  .chat-mini{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12.5px;cursor:pointer}
+  .chat-card .big{font-size:24px;font-weight:800;margin:6px 0}
+  .chat-card .go{display:inline-block;margin-top:6px;font-size:12.5px;color:var(--blue);cursor:pointer;text-decoration:none}
+  .chat-mini{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--border);font-size:13px;cursor:pointer}
   .chat-mini:last-child{border-bottom:none}
   .chat-mini:hover{color:var(--text)}
-  .suggest{display:flex;flex-wrap:wrap;gap:6px;padding:10px 2px 6px}
-  .suggest .chip{font-size:12px;padding:6px 13px;cursor:pointer}
-  .chat-input{display:flex;gap:8px;padding:10px 0 0;border-top:1px solid var(--border)}
-  .chat-input input{flex:1;padding:11px 14px}
-  .chat-input button{border-radius:10px;padding:0 22px}
+  .chat-inbar{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px 16px}
+  .suggest{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:11px}
+  .suggest .chip{font-size:12.5px;padding:7px 14px;cursor:pointer}
+  .chat-input{display:flex;gap:10px;align-items:flex-end}
+  .chat-input textarea{flex:1;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font:14px/1.5 inherit;resize:none;min-height:48px}
+  .chat-input textarea:focus{outline:none;border-color:var(--blue)}
+  .chat-input .btn{border-radius:12px;padding:0 26px;height:48px}
+  .chat-disc{font-size:11px;text-align:center;margin-top:10px}
+  /* 积分充值 */
+  .ptpresets{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:6px 0}
+  .ptpreset{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;cursor:pointer;transition:.15s}
+  .ptpreset:hover{border-color:var(--green);transform:translateY(-2px)}
+  .ptpreset .p1{font-size:16px;font-weight:800}.ptpreset .p2{color:var(--green);font-size:13px;margin-top:2px}
+  .ptaddr{display:flex;flex-direction:column;gap:8px}
+  .ptaddr>div{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ptaddr code{word-break:break-all;font-size:11.5px}
+  .cbtn{cursor:pointer;color:var(--blue);font-size:11px;border:1px solid var(--border);border-radius:6px;padding:1px 7px}
   .typing{display:flex;gap:3px;padding:4px 2px}
   .typing i{width:5px;height:5px;border-radius:50%;background:var(--dim);animation:typedot 1.2s infinite ease-in-out}
   .typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
@@ -212,17 +233,23 @@
   <!-- 对话 -->
   <div class="view on" id="v-chat">
     <div class="chatwrap">
-      <div class="chat-tophint">
-        <svg width="30" height="30" style="border-radius:50%"><use href="#rabbit-icon"/></svg>
-        <div><b data-i18n="chatTitle">CarryPilot 助手</b><div class="dim" style="font-size:12px" data-i18n="chatSub">问费率、问机会，确认后可直接下单</div></div>
+      <div class="chat-head">
+        <svg class="rb" viewBox="0 0 64 64" width="44" height="44"><use href="#rabbit-icon"/></svg>
+        <div>
+          <h3 data-i18n="chatTitle">CarryPilot 助手</h3>
+          <div class="sub" data-i18n="chatSub">问费率、问机会，确认后可直接下单</div>
+        </div>
+        <div class="chat-market" id="chatMarket"></div>
       </div>
       <div class="chat-body" id="chatBody"></div>
-      <div class="suggest" id="chatSuggest"></div>
-      <div class="chat-input">
-        <input id="chatInput" placeholder="例如：BTC 现在费率多少 / 帮我做 1000u BTC" data-i18n-ph="chatPh" onkeydown="if(event.key==='Enter')sendChat()">
-        <button class="btn" onclick="sendChat()" data-i18n="chatSend">发送</button>
+      <div class="chat-inbar">
+        <div class="suggest" id="chatSuggest"></div>
+        <div class="chat-input">
+          <textarea id="chatInput" rows="2" placeholder="例如：BTC 现在费率多少 / 帮我做 1000u BTC" data-i18n-ph="chatPh" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+          <button class="btn" onclick="sendChat()" data-i18n="chatSend">发送</button>
+        </div>
+        <div class="dim chat-disc" data-i18n="chatDisc">⚠ 研究结论，非投资建议。下单由你确认，风控不可越权。</div>
       </div>
-      <div class="dim" style="font-size:11px;text-align:center;margin-top:8px" data-i18n="chatDisc">⚠ 研究结论，非投资建议。下单由你确认，风控不可越权。</div>
     </div>
   </div>
 
@@ -316,6 +343,8 @@
   <div class="view" id="v-earn">
     <h2 data-i18n="earnTitle">收益中心</h2><div class="sub" data-i18n="earnSub">记账口径为 Modeled/Paper；实盘真实数据见实盘面板。</div>
     <div class="cards" id="earn-cards"></div>
+    <b style="display:block;margin:12px 0 8px" data-i18n="openTitle">当前持仓</b>
+    <div id="open-body"></div>
     <div class="panel"><b data-i18n="pnlCurve">PnL 曲线（全部 Agent 合计）</b><svg class="chart" id="equity-chart" height="90" preserveAspectRatio="none"></svg></div>
     <b style="display:block;margin:12px 0 8px" data-i18n="closedTitle">平仓记录（含 Receipt 哈希）</b>
     <table><thead><tr><th data-i18n="thTime">时间</th><th data-i18n="thAsset">资产</th><th data-i18n="thMode">模式</th><th data-i18n="thNotional">名义<span class="tip" data-t="名义本金：这笔套利组合两条腿各自的仓位价值。收益和成本都按名义本金的百分比计算">?</span></th><th data-i18n="thHold">持有</th><th>PnL</th><th><span data-i18n="thRApr">实现年化</span><span class="tip" data-t="实现年化：这笔已平仓交易的实际净收益，折算成年化百分比。区别于开仓前的『建模净APR』（预估）">?</span></th><th data-i18n="thReason">原因</th><th>Receipt<span class="tip" data-t="平仓记录的 SHA-256 哈希，防篡改凭证。后续版本将把摘要锚定到 Injective 链上">?</span></th></tr></thead><tbody id="closed-body"></tbody></table>
@@ -384,7 +413,7 @@ const I18N={
  earnTitle:['收益中心','Earnings'],earnSub:['记账口径为 Modeled/Paper；实盘真实数据见实盘面板。','Modeled/paper figures; live data below.'],pnlCurve:['PnL 曲线（全部 Agent 合计）','PnL (all agents)'],
  ptTitle:['INJ 积分充值','INJ Credits'],ptDesc:['Agent 每回合消耗积分。向平台金库转原生 INJ 充值，按 sender 自动归属、txhash 幂等。','Agents burn credits per round. Top up with native INJ.'],
  liveTitle:['实盘设置','Live Setup'],liveDesc:['实盘 = 平台生成专属 API Wallet（只能交易、无法提币），主钱包签一次 EIP-712 授权。需 Hyperliquid 账户已有 USDC。','Live uses a trade-only API wallet authorized via EIP-712.'],
- closedTitle:['平仓记录（含 Receipt 哈希）','Closed positions'],thTime:['时间','Time'],thMode:['模式','Mode'],thNotional:['名义','Notional'],thHold:['持有','Held'],thRApr:['实现年化','Realized'],thReason:['原因','Reason'],thAsset:['资产','Asset'],
+ openTitle:['当前持仓','Open positions'],closedTitle:['平仓记录（含 Receipt 哈希）','Closed positions'],thTime:['时间','Time'],thMode:['模式','Mode'],thNotional:['名义','Notional'],thHold:['持有','Held'],thRApr:['实现年化','Realized'],thReason:['原因','Reason'],thAsset:['资产','Asset'],
  riskTitle:['风险中心','Risk Center'],riskSub:['持仓风险分级 + 未来 48h 三情景 PnL 预测。Agent 依据同一套规则自动清仓或调仓。','Risk levels + 48h scenario projection; agents act on the same rules.'],
  liveObs:['实盘账户观测','Live Account'],liveObsHint:['连接钱包并完成实盘授权后展示。','Shown after live approval.'],
  tabSet:['设置','Settings'],setTitle:['设置','Settings'],setSub:['账户连接、虚拟盘资金、交易授权与燃料充值。','Account, virtual balance, authorization & fuel.'],setWallet:['钱包','Wallet'],
@@ -548,6 +577,7 @@ async function loadScan(force){
   if(!force&&SCAN)return;
   SCAN=await (await fetch('/api/scan')).json();
   renderScan();
+  renderChatMarket();
   $('disclaimer').textContent='⚠ '+SCAN.disclaimer;
 }
 const hlLink=c=>`<a class="ext" target="_blank" href="https://app.hyperliquid.xyz/trade/${c}" onclick="event.stopPropagation()">HL ↗</a>`;
@@ -835,6 +865,18 @@ function renderEarnings(){
     <div class="stat"><div class="k">${LANG==='zh'?'累计资金费收入':'Funding earned'}</div><div class="v pos">${usd(S.fundingAccrued)}</div></div>
     <div class="stat"><div class="k">${LANG==='zh'?'当前持仓':'Open'}</div><div class="v">${S.openCount}</div></div>
     <div class="stat"><div class="k">${LANG==='zh'?'已平仓':'Closed'}</div><div class="v">${closed.length}</div></div>`;
+  // 当前持仓
+  const open=wsPos().filter(p=>p.status==='OPEN');
+  $('open-body').innerHTML=open.length?`<div style="overflow-x:auto"><table><thead><tr>
+    <th>${LANG==='zh'?'资产':'Asset'}</th><th>${LANG==='zh'?'来源':'Src'}</th><th>${LANG==='zh'?'名义':'Notional'}</th><th>${LANG==='zh'?'当前费率':'Rate'}</th><th>${LANG==='zh'?'累计funding':'Funding'}</th><th>${LANG==='zh'?'成本':'Cost'}</th><th>PnL</th><th>${LANG==='zh'?'持有':'Held'}</th><th></th></tr></thead><tbody>
+    ${open.sort((a,b)=>(b.entryAt||'').localeCompare(a.entryAt||'')).map(p=>`<tr>
+      <td><b>${p.asset}</b></td><td class="dim">${p.agentId?'🤖 Agent':(LANG==='zh'?'💬 手动':'💬 Manual')}</td>
+      <td>$${p.notionalUsd.toFixed(0)}</td><td class="${p.currentHourlyFundingPct>=0?'pos':'neg'}">${fmt(p.currentHourlyFundingPct,5)}/h</td>
+      <td class="pos">${usd(p.fundingAccruedUsd)}</td><td class="neg">${usd(-p.costsPaidUsd)}</td>
+      <td class="${p.pnlUsd>=0?'pos':'neg'}"><b>${usd(p.pnlUsd)}</b></td><td class="dim">${p.holdHours.toFixed(1)}h</td>
+      <td><button class="btn ghost mini" onclick="closePos('${p.id}')">${LANG==='zh'?'平仓':'Close'}</button></td></tr>`).join('')}
+    </tbody></table></div>`
+    :`<div class="empty" style="padding:20px">${LANG==='zh'?'当前无持仓。去套利机会或对话下单，或让 Agent 自动开仓。':'No open positions.'}</div>`;
   const agg={};wsAgents().forEach(a=>(a.equitySeries||[]).forEach(p=>{agg[p.at]=(agg[p.at]||0)+p.pnlUsd}));
   const entries=Object.entries(agg).sort((a,b)=>a[0]<b[0]?-1:1);
   lineChart($('equity-chart'),[{data:entries.map(e=>e[1]),color:'var(--green)'}],90,
@@ -872,14 +914,54 @@ function renderRisk(){
 }
 
 /* ---------- points / live ---------- */
+const injScan=a=>`https://injscan.com/account/${a}/`;
+function copyTxt(t,el){navigator.clipboard&&navigator.clipboard.writeText(t);if(el){const o=el.textContent;el.textContent='✓';setTimeout(()=>el.textContent=o,1000)}}
+const PT_PRESETS=[1,10,50,100];
 function renderPoints(){
   const p=ME.points;const chip=$('pointsChip');
   chip.style.display='inline-flex';chip.textContent='⚡ '+p.balance.toFixed(1);
-  $('points-panel').innerHTML=`${LANG==='zh'?'余额':'Balance'} <b style="font-size:16px">${p.balance.toFixed(1)}</b> · ${p.perTick}/${LANG==='zh'?'回合':'round'} · 1 INJ = ${p.rateInj}<br>
-    ${p.treasury?`${LANG==='zh'?'金库地址':'Treasury'}: <code style="word-break:break-all">${p.treasury}</code><br>
-    <span class="dim" style="font-size:12px">${LANG==='zh'?'请从你登录钱包对应的 Injective 地址转出':'Send from your wallet\'s inj address'}: <code>${p.depositFromInj}</code></span><br>
-    <button class="btn ghost mini" style="margin-top:8px" onclick="refreshPoints(this)">${LANG==='zh'?'我已转账，扫描到账':'Scan deposits'}</button> <span id="pt-msg" class="dim" style="font-size:12px"></span>`
-    :`<span class="t-warn tag">${LANG==='zh'?'金库未配置（INJ_TREASURY_ADDRESS）— 当前仅体验积分':'Treasury not configured — trial credits only'}</span>`}`;
+  const presets=PT_PRESETS.map(pts=>{const inj=(pts/p.rateInj);return `<div class="ptpreset" onclick="pickPreset(${pts},${inj})"><div class="p1">${pts} ${LANG==='zh'?'积分':'pts'}</div><div class="p2">${inj} INJ</div></div>`}).join('');
+  $('points-panel').innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+      <div><div class="dim" style="font-size:11px">${LANG==='zh'?'当前余额':'Balance'}</div><div style="font-size:24px;font-weight:800">⚡ ${p.balance.toFixed(1)}</div></div>
+      <div class="dim" style="font-size:12px">${LANG==='zh'?`消耗 ${p.perTick}/回合 · 汇率 1 INJ = ${p.rateInj} 积分`:`${p.perTick}/round · 1 INJ = ${p.rateInj} pts`}</div>
+    </div>
+    ${p.treasury?`
+    <div class="sec-t">${LANG==='zh'?'① 选择充值套餐':'① Pick a package'}</div>
+    <div class="ptpresets">${presets}</div>
+    <div class="sec-t">${LANG==='zh'?'② 向金库地址转入原生 INJ（Injective 链）':'② Send native INJ to treasury'}</div>
+    <div class="ptaddr">
+      <div><span class="dim">${LANG==='zh'?'金库收款地址':'Treasury'}</span>
+        <code>${p.treasury}</code>
+        <span class="cbtn" onclick="copyTxt('${p.treasury}',this)">复制</span>
+        <a class="ext" href="${injScan(p.treasury)}" target="_blank">浏览器 ↗</a></div>
+      <div><span class="dim">${LANG==='zh'?'请从你的 Injective 地址转出':'From your inj address'}</span>
+        <code>${p.depositFromInj}</code>
+        <span class="cbtn" onclick="copyTxt('${p.depositFromInj}',this)">复制</span>
+        <a class="ext" href="${injScan(p.depositFromInj)}" target="_blank">浏览器 ↗</a></div>
+    </div>
+    <div id="pt-pick" class="dim" style="font-size:12px;margin:8px 0"></div>
+    <button class="btn ghost mini" onclick="refreshPoints(this)">${LANG==='zh'?'③ 我已转账，扫描到账':'③ Scan deposits'}</button> <span id="pt-msg" class="dim" style="font-size:12px"></span>
+    <div class="sec-t">${LANG==='zh'?'充值记录':'Deposit history'} <span class="dim" style="font-size:11px;cursor:pointer" onclick="loadPtHistory()">↻</span></div>
+    <div id="pt-history" class="dim" style="font-size:12px">${LANG==='zh'?'加载中…':'loading…'}</div>`
+    :`<span class="t-warn tag">${LANG==='zh'?'金库未配置 — 当前仅体验积分':'Treasury not configured — trial credits only'}</span>`}`;
+  if(p.treasury) loadPtHistory();
+}
+function pickPreset(pts,inj){
+  const el=$('pt-pick');if(el)el.innerHTML=`👉 ${LANG==='zh'?`充 <b>${pts}</b> 积分 = 转 <b>${inj} INJ</b> 到金库地址。转账后点下方「扫描到账」。`:`Send <b>${inj} INJ</b> for <b>${pts}</b> credits, then scan.`}`;
+}
+async function loadPtHistory(){
+  const el=$('pt-history');if(!el)return;
+  try{
+    const d=await (await authFetch('/api/points')).json();
+    const rows=(d.history||[]).filter(h=>h.kind!=='tick').slice(0,20);
+    el.innerHTML=rows.length?`<div style="overflow-x:auto"><table><thead><tr><th>${LANG==='zh'?'时间':'Time'}</th><th>${LANG==='zh'?'类型':'Type'}</th><th>${LANG==='zh'?'积分':'Pts'}</th><th>Tx</th></tr></thead><tbody>${rows.map(h=>`<tr>
+      <td class="dim">${new Date(h.at).toLocaleString()}</td>
+      <td>${h.kind==='deposit'?'💰 '+(LANG==='zh'?'充值':'deposit'):h.kind==='welcome'?'🎁 '+(LANG==='zh'?'赠送':'welcome'):h.kind}</td>
+      <td class="${h.points>=0?'pos':'neg'}">${h.points>=0?'+':''}${h.points.toFixed(1)}</td>
+      <td>${h.txhash?`<a class="ext" href="https://injscan.com/transaction/${h.txhash}/" target="_blank">${h.txhash.slice(0,8)}…</a>`:'—'}</td></tr>`).join('')}</tbody></table></div>`
+      :`<span>${LANG==='zh'?'暂无充值记录':'No deposits yet'}</span>`;
+  }catch(e){el.textContent='加载失败'}
 }
 async function refreshPoints(btn){
   btn.disabled=true;$('pt-msg').textContent='…';
@@ -947,9 +1029,20 @@ async function closePos(id){
 }
 
 /* ---------- 对话 tab ---------- */
+function chatEmptyState(){
+  return `<div class="chat-empty"><svg class="mascot" viewBox="0 0 64 64" width="110" height="110"><use href="#rabbit-icon"/></svg>
+    <h3>${LANG==='zh'?'你好，我是 CarryPilot 助手':'Hi, I\'m CarryPilot'}</h3>
+    <p>${LANG==='zh'?'问我资金费率、找套利机会，谈拢了直接说「帮我做 1000u BTC」，我给你确认卡片再下单。':'Ask about funding rates or arbitrage. Say "trade 1000u BTC" and I\'ll show a confirmation card.'}</p></div>`;
+}
+function renderChatMarket(){
+  const el=$('chatMarket');if(!el||!SCAN)return;
+  const pick=['BTC','ETH','SOL'].map(c=>(SCAN.rates||[]).find(r=>r.coin===c)).filter(Boolean);
+  el.innerHTML=pick.map(r=>`<div class="cm-cell"><div class="k">${r.coin} funding</div><div class="v ${r.hourlyFundingPct>=0?'pos':'neg'}">${fmt(r.hourlyFundingPct,4)}/h</div></div>`).join('');
+}
 function initChat(){
+  renderChatMarket();
   if(chatStarted)return;chatStarted=true;
-  appendMsg('agent', I18N.chatGreet[LANG==='zh'?0:1]);
+  const body=$('chatBody');if(body&&!body.children.length)body.innerHTML=chatEmptyState();
   renderChatSuggest();
   const inp=$('chatInput');if(inp)inp.focus();
 }
@@ -959,8 +1052,10 @@ function renderChatSuggest(){
   el.innerHTML=keys.map(k=>`<span class="chip" onclick="quickChat('${I18N[k][LANG==='zh'?0:1].replace(/'/g,"\\'")}')">${I18N[k][LANG==='zh'?0:1]}</span>`).join('');
 }
 function quickChat(text){$('chatInput').value=text;sendChat()}
+function clearChat(){const b=$('chatBody');if(b)b.innerHTML=chatEmptyState();renderChatSuggest()}
 function appendMsg(role,html,isCard){
   const body=$('chatBody');
+  const empty=body.querySelector('.chat-empty');if(empty)empty.remove();
   const avatar = role==='agent' ? `<div class="av"><svg width="16" height="16"><use href="#rabbit-icon"/></svg></div>` : '';
   const div=document.createElement('div');
   div.className='msg '+role;
