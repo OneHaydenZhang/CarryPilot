@@ -210,7 +210,7 @@ const result = await client.callTool({ name: "find_arbitrage", arguments: {} });
     <h2><span class="n">⑤</span>x402: pay-per-call for the full report</h2>
     <p class="lead">The three free entry points only answer "the one thing you asked." The full report (every market-wide candidate + the whole rate table, not a summary) is metered in USDC via <a href="https://x402.org" target="_blank" rel="noopener">x402</a> — HTTP 402 kicks it off, on-chain <code>EIP-3009</code> gasless signed payment settles it, no human in the loop. An AI agent can pay for its own data.</p>
     <span class="pill get">GET</span> <code>/api/agent/report</code>
-    <span class="warn">Current status: Injective <b>testnet</b>. The 402 quote handshake + EIP-3009 signing + balance verification are all confirmed working end-to-end; on-chain settlement (the last step, pending the payer test wallet being funded) is being verified — this line will be updated once it's confirmed</span>
+    <span class="warn">Current status: Injective <b>testnet</b> (eip155:1439) — the full x402 flow is verified end-to-end and <b>confirmed on-chain</b>: 402 quote → EIP-3009 gasless signing → facilitator-sponsored on-chain settlement, 0.01 USDC moved payer→facilitator (see <code>scripts/x402-a2a-test.ts</code>, settlement tx <code>0xbdf6030e…459dd73</code>).</span>
 
     <h3>Step 1: request with no payment → get a 402 quote</h3>
     <div class="code">curl <span class="origin"></span>/api/agent/report</div>

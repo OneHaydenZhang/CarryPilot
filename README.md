@@ -145,7 +145,9 @@ See the **[🔧 Technical Doc](./docs/TECHNICAL.md)** for architecture and imple
 | x402 testnet USDC（EIP-3009） | `0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d) |
 | x402 付款方 Payer（20 USDC 已核验） | `0x55Fb674168849c023d067953D6cA23FAFDBf93Ac` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac) |
 | x402 收款金库 / Facilitator | `0xF3526895E582cA5Fe563554Fc5c156f243bA86cE` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE) |
+| **x402 结算交易**（0.01 USDC，payer→facilitator，已确认上链） | tx `0xbdf6030e…459dd73` | [Blockscout ↗](https://testnet.blockscout.injective.network/tx/0xbdf6030ee3b06bacb4cc4c15748844daa7dd69fc5a86eab4260c0416b459dd73) |
 
+> **x402 全链路已实测跑通并确认上链**：402 报价 → EIP-3009 gasless 签名 → facilitator 代付 gas 链上结算，0.01 USDC 由 payer 转入 facilitator（payer `20.00→19.99`、facilitator `0→0.01`，账实相符）。
 > INJ 充值：用户 Cosmos 钱包 `signDirect` 签名原生 INJ `MsgSend` → 后端广播 → 按 txhash 幂等入积分；每笔在「Agent 中心 → 积分流水」附 injscan 交易链接。x402 详细调试记录见[技术文档开头](./docs/TECHNICAL.md#-链上证据--on-chain-evidencex402--inj-结算)。
 
 ---

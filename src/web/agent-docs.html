@@ -211,7 +211,7 @@ const result = await client.callTool({ name: "find_arbitrage", arguments: {} });
     <h2><span class="n">⑤</span>x402：按次付费拿完整报告</h2>
     <p class="lead">免费三个入口只回答"你问的那一句"。完整报告（全市场候选 + 全费率表，不是摘要）走 <a href="https://x402.org" target="_blank" rel="noopener">x402</a> 协议收 USDC——HTTP 402 起手，链上 <code>EIP-3009</code> 免 gas 签名支付，全程无需人工介入，AI agent 可以自己付钱自己拿数据。</p>
     <div class="endpoint-line"><span class="pill get">GET</span> <code>/api/agent/report</code></div>
-    <span class="warn">当前状态：Injective <b>testnet</b>（eip155:1439）。402 报价握手、EIP-3009 签名、客户端自动付费流程均已端到端跑通（见 <code>scripts/x402-a2a-test.ts</code>）；最后一步链上结算需给 payer 测试网钱包充值 USDC，充值后即完成全链路验证。</span>
+    <span class="warn">当前状态：Injective <b>testnet</b>（eip155:1439），x402 全链路已实测跑通并<b>确认上链</b>——402 报价 → EIP-3009 免 gas 签名 → facilitator 代付 gas 链上结算，0.01 USDC 由 payer 转入 facilitator（见 <code>scripts/x402-a2a-test.ts</code>，结算 tx <code>0xbdf6030e…459dd73</code>）。</span>
 
     <h3>第 1 步：不带支付直接请求 → 收到 402 报价</h3>
     <div class="code">curl <span class="origin"></span>/api/agent/report</div>

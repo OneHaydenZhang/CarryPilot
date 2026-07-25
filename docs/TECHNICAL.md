@@ -13,7 +13,18 @@
 
 ## 🔗 链上证据 · On-chain Evidence（x402 / INJ 结算）
 
-> 以下均为 Injective **测试网**（EVM chainId `1439` / Cosmos `injective-888`）真实链上地址与合约，可在区块浏览器直接核验。
+> 以下均为真实链上地址与合约，可在区块浏览器直接核验。**本表仅含公开地址 / 合约 / 交易哈希；对应私钥与助记词从不入库，由运营方离线保管**（硬性规则 0/2）。
+
+### 📇 地址登记 · Address Registry
+
+| 角色 | 网络 | 地址 / 合约 | 浏览器 |
+|---|---|---|---|
+| x402 付款方 Payer（AI 调用方） | Injective EVM testnet · 1439 | `0x55Fb674168849c023d067953D6cA23FAFDBf93Ac` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac) |
+| x402 收款金库 / Facilitator（结算方） | Injective EVM testnet · 1439 | `0xF3526895E582cA5Fe563554Fc5c156f243bA86cE`<br>bech32 `inj17dfx3909st99letr248uts2k7fpm4pkwtvsqpe` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE) |
+| testnet USDC（EIP-3009 FiatTokenV2_2） | Injective EVM testnet · 1439 | `0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d) |
+| INJ 积分充值金库（Cosmos MsgSend 收款） | Injective mainnet · injective-1 | `inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu` | [injscan ↗](https://injscan.com/account/inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu/) |
+
+> **同一 facilitator 地址跨网说明**：`0xF352…86cE`（= `inj17dfx…sqpe`）在 **testnet** 持有 1 INJ 用于 x402 结算付 gas（[testnet ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE)，x402 结算已确认上链，见下）；此外其 **mainnet** 地址另收过一笔 **0.1 INJ**（真实主网转账，[injscan 主网 ↗](https://injscan.com/account/inj17dfx3909st99letr248uts2k7fpm4pkwtvsqpe/)），私钥可控、资金未丢，与 testnet 结算互不影响。
 
 ### x402 付费结算涉及的合约与地址
 
@@ -33,11 +44,14 @@
 | ② 无支付请求 `/api/agent/report` | ✅ **HTTP 402 Payment Required** + `PAYMENT-REQUIRED` 报价头 |
 | ③ 402 报价内容 | ✅ `{scheme:"exact", network:"eip155:1439", amount:"10000"(=0.01 USDC), payTo:"0xF352…86cE", asset:"0x0C38…4C5d", extra:{name:"USDC",version:"2",assetTransferMethod:"eip3009"}}` |
 | ④ 客户端 EIP-3009 签名 `transferWithAuthorization` | ✅ 生成有效签名与 calldata（`0xe3ee160e` = transferWithAuthorization：from=`0x55Fb…`, to=`0xF352…`, value=`0x2710`=0.01 USDC，带 v/r/s 签名） |
-| ⑤ facilitator 链上结算广播 | ✅ 已构建并广播结算交易（tx `8B908C157D4406BF7C5334718F24FDF3AC84C712AFA1F6DBBA60BD440AD41BEE`）；因 facilitator 当前 **0 INJ** 在校验阶段被拒：`sender balance < tx cost (0 < 47334912000000)` |
+| ⑤ facilitator 链上结算 | ✅ **已确认上链**：facilitator 用 EIP-3009 授权代付 gas，把 0.01 USDC 从 payer 转入自身。tx **[`0xbdf6030e…459dd73`](https://testnet.blockscout.injective.network/tx/0xbdf6030ee3b06bacb4cc4c15748844daa7dd69fc5a86eab4260c0416b459dd73)**（block `0x806eb6d`），USDC 合约 `Transfer(from=0x55Fb…, to=0xF352…, value=10000)` 事件已上链 |
+| ⑥ 链上余额核对（结算前后） | ✅ payer USDC `20.00 → 19.99`（−0.01）、facilitator USDC `0 → 0.01`（+0.01），账实相符 |
 
-> **结论：402 报价握手 → EIP-3009 签名 → facilitator 构建并广播链上结算，全链路已实测跑通。** 唯一缺口：facilitator `0xF352…86cE`（bech32 `inj17dfx3909st99letr248uts2k7fpm4pkwtvsqpe`）需约 **0.0000473 INJ/次** 的 gas。充入少量 testnet INJ（一次 faucet 即覆盖数千次结算）后，同一条命令即产出成功确认哈希，届时补上浏览器链接。
+> **结论：402 报价握手 → EIP-3009 签名 → facilitator 链上结算，x402 全链路已实测跑通并确认上链。**
+> 结算交易：[testnet.blockscout.injective.network/tx/0xbdf6030e…459dd73 ↗](https://testnet.blockscout.injective.network/tx/0xbdf6030ee3b06bacb4cc4c15748844daa7dd69fc5a86eab4260c0416b459dd73)
+> USDC Transfer 事件：`topic0=0xddf252ad…（Transfer）`, `from=0x55Fb…93Ac`, `to=0xF352…86cE`, `value=0x2710`(=0.01 USDC)。
 >
-> 复现命令：`PAYER_PK=<payer> BASE=http://localhost npx tsx scripts/x402-a2a-test.ts`
+> 复现命令：`PAYER_PK=<payer> BASE=http://localhost npx tsx scripts/x402-a2a-test.ts`（facilitator `inj17dfx…sqpe` 需持 testnet INJ 付 gas，本次已充值 1 INJ）
 
 ### INJ 积分充值（Cosmos MsgSend，主网）
 
