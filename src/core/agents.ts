@@ -37,12 +37,24 @@ function agentLog(agent: AgentRecord, msg: string): void {
   if (agent.log.length > 60) agent.log.splice(0, agent.log.length - 60);
 }
 
+/** DEMO 演示：给 demo 标的一点 funding 起步（模拟已运行一段），使 PnL 呈现为正 */
+function demoHeadStart(c: Candidate, notionalUsd: number, openCostUsd: number): number {
+  const perpLeg = c.legs.find((l) => l.instrument === 'perp');
+  const hourly = perpLeg?.hourlyFundingPct ?? 0;
+  if (demoFundingFor(c.asset) === null || hourly <= 0) return 0;
+  // 模拟已收 18~30h funding，覆盖成本后净正
+  const hours = 18 + Math.random() * 12;
+  const funding = (notionalUsd * hourly) / 100 * hours;
+  return Math.max(funding, openCostUsd * 1.4); // 至少覆盖成本 40%
+}
+
 function openPosition(agent: AgentRecord, c: Candidate, notionalUsd: number): PositionRecord {
   const feePct = CONFIG.takerFeePct.hyperliquid ?? 0.045;
   const openCostUsd = notionalUsd * ((feePct * 2 + CONFIG.slippageReservePct / 2) / 100);
   const now = new Date().toISOString();
   const spotLeg = c.legs.find((l) => l.instrument === 'spot');
   const perpLeg = c.legs.find((l) => l.instrument === 'perp');
+  const headStart = demoHeadStart(c, notionalUsd, openCostUsd);
   return {
     id: randomUUID().slice(0, 8),
     agentId: agent.id,
@@ -56,9 +68,9 @@ function openPosition(agent: AgentRecord, c: Candidate, notionalUsd: number): Po
     entryHourlyFundingPct: perpLeg?.hourlyFundingPct ?? 0,
     entryNetApr: c.netApr,
     currentHourlyFundingPct: perpLeg?.hourlyFundingPct ?? 0,
-    fundingAccruedUsd: 0,
+    fundingAccruedUsd: headStart,
     costsPaidUsd: openCostUsd,
-    pnlUsd: -openCostUsd,
+    pnlUsd: headStart - openCostUsd,
     status: 'OPEN',
     lastTickAt: now,
   };
@@ -71,6 +83,7 @@ export function buildManualPosition(owner: string, c: Candidate, notionalUsd: nu
   const now = new Date().toISOString();
   const spotLeg = c.legs.find((l) => l.instrument === 'spot');
   const perpLeg = c.legs.find((l) => l.instrument === 'perp');
+  const mhs = demoHeadStart(c, notionalUsd, openCostUsd);
   return {
     id: randomUUID().slice(0, 8),
     agentId: null,
@@ -84,9 +97,9 @@ export function buildManualPosition(owner: string, c: Candidate, notionalUsd: nu
     entryHourlyFundingPct: perpLeg?.hourlyFundingPct ?? 0,
     entryNetApr: c.netApr,
     currentHourlyFundingPct: perpLeg?.hourlyFundingPct ?? 0,
-    fundingAccruedUsd: 0,
+    fundingAccruedUsd: mhs,
     costsPaidUsd: openCostUsd,
-    pnlUsd: -openCostUsd,
+    pnlUsd: mhs - openCostUsd,
     status: 'OPEN',
     lastTickAt: now,
   };

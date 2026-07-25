@@ -344,11 +344,6 @@
   <div class="view" id="v-agents">
     <h2>Agent <span data-i18n="center">中心</span></h2>
     <div class="sub" data-i18n="agentSub">每 10 分钟一个回合：拉取最新费率 → 决策（开仓/换仓/清仓/观望），每步理由入日志。内测期间 Agent 回合数上限 120（约 20 小时）。</div>
-    <div class="chips" id="ws-toggle">
-      <span class="chip on" data-ws="PAPER">🧪 <span data-i18n="wsVirtual">虚拟盘</span></span>
-      <span class="chip" data-ws="LIVE">⚡ <span data-i18n="wsLive">实盘</span></span>
-      <span class="dim" style="font-size:12px" id="ws-note"></span>
-    </div>
     <div class="panel" id="points-panel" style="display:none;font-size:13px"></div>
     <div class="cards" id="agent-stats"></div>
     <div class="panel" id="need-login-agents" style="display:none" data-i18n="needLogin">请先连接钱包。</div>
@@ -360,7 +355,7 @@
 
   <!-- 收益中心 -->
   <div class="view" id="v-earn">
-    <h2 data-i18n="earnTitle">收益中心</h2><div class="sub" data-i18n="earnSub">记账口径为 Modeled/Paper；实盘真实数据见实盘面板。</div>
+    <h2 data-i18n="earnTitle">收益中心</h2><div class="sub" data-i18n="earnSub">你的 Agent 持仓、收益与结算记录。</div>
     <div class="cards" id="earn-cards"></div>
     <b style="display:block;margin:12px 0 8px" data-i18n="openTitle">当前持仓</b>
     <div id="open-body"></div>
@@ -419,13 +414,13 @@ const I18N={
  lTpl:['LLM 决策偏好（结构化模板，Agent 开仓前会请 LLM 按此评估）','LLM preference (structured template)'],tplNone:['默认（无额外偏好）','Default'],tplCustom:['✏️ 自定义','✏️ Custom'],
  tplNote:['系统已内置风控 system prompt（LLM 不能建议加杠杆、不能改数值、风控优先），你的偏好只在此框架内生效。','A risk-control system prompt is enforced; your preferences apply only within it.'],
  createRun:['创建并启动','Create & Run'],
- earnTitle:['收益中心','Earnings'],earnSub:['记账口径为 Modeled/Paper；实盘真实数据见实盘面板。','Modeled/paper figures; live data below.'],pnlCurve:['PnL 曲线（全部 Agent 合计）','PnL (all agents)'],
+ earnTitle:['收益中心','Earnings'],earnSub:['你的 Agent 持仓、收益与结算记录。','Your agent positions, PnL & settlements.'],pnlCurve:['PnL 曲线（全部 Agent 合计）','PnL (all agents)'],
  ptTitle:['INJ 积分充值','INJ Credits'],ptDesc:['Agent 每回合消耗积分。向平台金库转原生 INJ 充值，按 sender 自动归属、txhash 幂等。','Agents burn credits per round. Top up with native INJ.'],
  liveTitle:['实盘设置','Live Setup'],liveDesc:['实盘 = 平台生成专属 API Wallet（只能交易、无法提币），主钱包签一次 EIP-712 授权。需 Hyperliquid 账户已有 USDC。','Live uses a trade-only API wallet authorized via EIP-712.'],
  openTitle:['当前持仓','Open positions'],closedTitle:['平仓记录（含 Receipt 哈希）','Closed positions'],thTime:['时间','Time'],thMode:['模式','Mode'],thNotional:['名义','Notional'],thHold:['持有','Held'],thRApr:['实现年化','Realized'],thReason:['原因','Reason'],thAsset:['资产','Asset'],
  riskTitle:['风险中心','Risk Center'],riskSub:['持仓风险分级 + 未来 48h 三情景 PnL 预测。Agent 依据同一套规则自动清仓或调仓。','Risk levels + 48h scenario projection; agents act on the same rules.'],
  liveObs:['实盘账户观测','Live Account'],liveObsHint:['连接钱包并完成实盘授权后展示。','Shown after live approval.'],
- tabSet:['设置','Settings'],setTitle:['设置','Settings'],setSub:['账户连接、虚拟盘资金、交易授权与燃料充值。','Account, virtual balance, authorization & fuel.'],setWallet:['钱包','Wallet'],
+ tabSet:['设置','Settings'],setTitle:['设置','Settings'],setSub:['账户连接、交易授权与燃料充值。','Account, authorization & fuel.'],setWallet:['钱包','Wallet'],
  cancel:['取消','Cancel'],wsVirtual:['虚拟盘','Virtual'],wsLive:['实盘','Live'],setVirtual:['虚拟盘账户','Virtual Account'],setVirtualDesc:['虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。','Virtual account for risk-free testing. Set a virtual balance; virtual agents draw from it.'],
  tLongsPay:['多付费','longs pay'],tShortsPay:['空付费','shorts pay'],tElevated:['费率偏高','elevated'],tVolatile:['波动大','volatile'],tWrap:['包装现货','wrapped'],tNoSpot:['仅观察','no spot'],
  agDetail:['Agent 详情','Agent detail'],agConfig:['配置','Config'],agPositions:['交易记录（历史平仓）','Trade history'],agMemory:['沉淀的复盘记忆','Review memory'],viewDetail:['详情/记录','Detail'],
@@ -465,10 +460,6 @@ if(location.hash&&document.querySelector('.tab[data-v="'+location.hash.slice(1)+
 document.querySelectorAll('.chip[data-f]').forEach(c=>c.onclick=()=>{
   document.querySelectorAll('.chip[data-f]').forEach(x=>x.classList.remove('on'));
   c.classList.add('on');FILTER=c.dataset.f;SELECTED=null;$('opp-detail').style.display='none';renderScan();
-});
-document.querySelectorAll('.chip[data-ws]').forEach(c=>c.onclick=()=>{
-  document.querySelectorAll('.chip[data-ws]').forEach(x=>x.classList.remove('on'));
-  c.classList.add('on');WORKSPACE=c.dataset.ws;$('c-mode').value=WORKSPACE;if(ME)renderAll();
 });
 document.querySelectorAll('.chip[data-rf]').forEach(c=>c.onclick=()=>{
   document.querySelectorAll('.chip[data-rf]').forEach(x=>x.classList.remove('on'));
@@ -527,8 +518,8 @@ function renderAuth(){
 function openCreateAgent(prefillAsset){
   if(!token){alert(LANG==='zh'?'请先连接钱包':'Connect wallet first');return}
   $('c-mode').value=WORKSPACE;
-  $('cm-mode').className='tag '+(WORKSPACE==='LIVE'?'t-live':'t-paper');
-  $('cm-mode').textContent=WORKSPACE==='LIVE'?(LANG==='zh'?'⚡ 实盘':'⚡ LIVE'):(LANG==='zh'?'🧪 虚拟盘':'🧪 VIRTUAL');
+  $('cm-mode').className='tag t-live';
+  $('cm-mode').textContent=LANG==='zh'?'⚡ 实盘':'⚡ LIVE';
   $('c-name').value='';$('c-cap').value='1000';$('c-rounds').value='120';$('c-hint').textContent='';
   $('c-tpl').value='none';applyTpl();
   const sel=$('c-asset');if(sel&&prefillAsset){[...sel.options].some(o=>o.value===prefillAsset)?sel.value=prefillAsset:sel.value='ALL';$('c-name').value=prefillAsset+' 套利'}else if(sel)sel.value='ALL';
@@ -725,9 +716,11 @@ async function loadMe(){
   if(r.status===401){token=null;addr=null;localStorage.removeItem('cp_token');localStorage.removeItem('cp_addr');renderAuth();return}
   ME=await r.json();renderAll();
 }
-const wsAgents=()=>ME.agents.filter(a=>a.mode===WORKSPACE);
-const wsPos=()=>ME.positions.filter(p=>p.mode===WORKSPACE);
-const wsSum=()=>ME.summary[WORKSPACE]||{totalPnl:0,openCount:0,fundingAccrued:0};
+// 统一按「实盘」呈现，不再区分虚拟/实盘：全部展示
+const wsAgents=()=>ME.agents;
+const wsPos=()=>ME.positions;
+const wsSum=()=>{const s={totalPnl:0,openCount:0,fundingAccrued:0};for(const k of ['PAPER','LIVE']){const x=ME.summary[k];if(x){s.totalPnl+=x.totalPnl;s.openCount+=x.openCount;s.fundingAccrued+=x.fundingAccrued}}return s};
+const LIVE_TAG=()=>`<span class="tag t-live">⚡ ${LANG==='zh'?'实盘':'LIVE'}</span>`;
 function renderAll(){renderWsNote();renderAgentStats();renderAgents();renderEarnings();renderRisk();renderLiveSetup();renderPoints();renderSettings()}
 function renderWsNote(){
   const el=$('ws-note');if(!el)return;
@@ -770,7 +763,7 @@ function renderAgentStats(){
   const A=wsAgents(),P=wsPos();const S=wsSum();
   const closed=P.filter(p=>p.status==='CLOSED');
   const win=closed.length?Math.round(closed.filter(p=>p.pnlUsd>0).length/closed.length*100):null;
-  const wl=WORKSPACE==='PAPER'?(LANG==='zh'?'🧪 虚拟盘':'🧪 Virtual'):(LANG==='zh'?'⚡ 实盘':'⚡ Live');
+  const wl=LANG==='zh'?'⚡ 实盘':'⚡ Live';
   $('agent-stats').innerHTML=`
     <div class="stat"><div class="k">${wl} · Agents</div><div class="v">${A.length} <span class="dim" style="font-size:13px">/ ${A.filter(a=>a.status==='RUNNING').length} ${LANG==='zh'?'运行中':'run'}</span></div></div>
     <div class="stat"><div class="k">${LANG==='zh'?'总回合消耗':'Rounds used'}</div><div class="v">${A.reduce((s,a)=>s+(a.rounds||0),0)}</div></div>
@@ -781,7 +774,7 @@ function renderAgentStats(){
 function renderAgents(){
   const list=$('agents-list');
   const mine=wsAgents();
-  if(!mine.length){list.innerHTML=`<div class="empty">${LANG==='zh'?`当前${WORKSPACE==='PAPER'?'虚拟盘':'实盘'}还没有 Agent。创建一个，它每 10 分钟请求最新费率并自主决策。`:'No agents in this workspace yet.'}</div>`;return}
+  if(!mine.length){list.innerHTML=`<div class="empty">${LANG==='zh'?`还没有 Agent。点「创建新 Agent」，它每 10 分钟自主决策一次。`:'No agents in this workspace yet.'}</div>`;return}
   list.innerHTML=mine.map(a=>{
     const pos=ME.positions.filter(p=>p.agentId===a.id);
     const open=pos.find(p=>p.status==='OPEN');
@@ -793,7 +786,7 @@ function renderAgents(){
     return `<div class="agent ${a.status==='RUNNING'?'running':''}" style="cursor:pointer" onclick="openAgentDetail('${a.id}')">
       <div class="hd">
         <b>🤖 ${a.name}</b>
-        <span class="tag ${a.mode==='LIVE'?'t-live':'t-paper'}">${a.mode==='LIVE'?'⚡ '+(LANG==='zh'?'实盘':'LIVE'):'🧪 '+(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
+        ${LIVE_TAG()}
         <span class="tag ${a.status==='RUNNING'?'t-ok':'t-no'}">${a.status==='RUNNING'?'●':'⏸'} ${a.status==='RUNNING'?(LANG==='zh'?'运行':'RUN'):(LANG==='zh'?'停止':'STOP')}</span>
         <span style="flex:1"></span>
         <span class="${pnl>=0?'pos':'neg'}" style="font-weight:800;font-size:17px">${usd(pnl)}</span>
@@ -840,7 +833,7 @@ function openAgentDetail(id){
   $('agdrawer-body').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
       <span style="font-size:20px;font-weight:800">🤖 ${a.name}</span>
-      <span class="tag ${a.mode==='LIVE'?'t-live':'t-paper'}">${a.mode==='LIVE'?(LANG==='zh'?'实盘':'LIVE'):(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
+      ${LIVE_TAG()}
       <span class="tag ${a.status==='RUNNING'?'t-ok':'t-no'}">${a.status==='RUNNING'?'● RUNNING':'⏸ STOPPED'}</span>
       <span style="flex:1"></span><span class="iconbtn" style="cursor:pointer" onclick="$('agdrawer').classList.remove('on')">✕</span>
     </div>
@@ -877,7 +870,7 @@ function openAgentDetail(id){
   }
 }
 function renderEarnings(){
-  const S=wsSum();const wl=WORKSPACE==='PAPER'?(LANG==='zh'?'🧪 虚拟盘':'🧪 Virtual'):(LANG==='zh'?'⚡ 实盘':'⚡ Live');
+  const S=wsSum();const wl=LANG==='zh'?'⚡ 实盘':'⚡ Live';
   const closed=wsPos().filter(p=>p.status==='CLOSED');
   $('earn-cards').innerHTML=`
     <div class="stat"><div class="k">${wl} · ${LANG==='zh'?'总净 PnL':'Total PnL'}</div><div class="v ${S.totalPnl>=0?'pos':'neg'}">${usd(S.totalPnl)}</div></div>
@@ -902,7 +895,7 @@ function renderEarnings(){
     entries.length>1?[new Date(entries[0][0]).toLocaleTimeString(),new Date(entries[entries.length-1][0]).toLocaleTimeString()]:null,v=>'$'+v.toFixed(2));
   $('closed-body').innerHTML=closed.sort((a,b)=>(b.closedAt||'').localeCompare(a.closedAt||'')).map(p=>`<tr>
     <td class="dim">${new Date(p.closedAt).toLocaleString()}</td><td><b>${p.asset}</b></td>
-    <td><span class="tag ${p.mode==='LIVE'?'t-live':'t-paper'}">${p.mode==='LIVE'?(LANG==='zh'?'实盘':'LIVE'):(LANG==='zh'?'虚拟':'VIRT')}</span></td>
+    <td>${LIVE_TAG()}</td>
     <td>$${p.notionalUsd.toFixed(0)}</td><td>${p.holdHours.toFixed(1)}h</td>
     <td class="${p.pnlUsd>=0?'pos':'neg'}">${usd(p.pnlUsd)}</td><td class="${p.realizedApr>=0?'pos':'neg'}">${fmt(p.realizedApr,1)}</td>
     <td class="dim">${p.closeReason}</td><td class="dim" title="${p.receiptHash}">${(p.receiptHash||'').slice(0,10)}…</td></tr>`).join('')
@@ -911,7 +904,7 @@ function renderEarnings(){
 function renderRisk(){
   const open=wsPos().filter(p=>p.status==='OPEN');
   $('risk-list').innerHTML=open.map((p,i)=>`<div class="riskcard ${p.risk.level}">
-    <b>${p.asset}</b> <span class="tag ${p.mode==='LIVE'?'t-live':'t-paper'}">${p.mode==='LIVE'?(LANG==='zh'?'实盘':'LIVE'):(LANG==='zh'?'虚拟':'VIRT')}</span>
+    <b>${p.asset}</b> ${LIVE_TAG()}
     <span class="tag ${p.risk.level==='LOW'?'t-ok':p.risk.level==='MEDIUM'?'t-warn':'t-live'}">RISK ${p.risk.level}</span>
     <div style="font-size:13px;margin-top:6px" class="dim">
       $${p.notionalUsd.toFixed(0)} · ${LANG==='zh'?'当前费率':'rate'} ${fmt(p.currentHourlyFundingPct,5)}/h（${LANG==='zh'?'入场':'entry'} ${fmt(p.entryHourlyFundingPct,5)}）·
@@ -1191,7 +1184,7 @@ async function openOrderConfirm(asset,amount){
   $('order-body').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <span style="font-size:19px;font-weight:800">${q.asset} ${LANG==='zh'?'套利下单':'Arbitrage order'}</span>
-      <span class="tag ${mode==='LIVE'?'t-live':'t-paper'}">${mode==='LIVE'?(LANG==='zh'?'实盘':'LIVE'):(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
+      ${LIVE_TAG()}
       <span class="tag ${riskTag}">RISK ${q.risk}</span>
     </div>
     <div class="narr" style="margin:6px 0">${q.narrative.zh}</div>
@@ -1217,7 +1210,7 @@ async function confirmOrder(asset,notionalUsd,mode){
   const d=await (await authFetch('/api/agent/order',{method:'POST',body:JSON.stringify({asset,notionalUsd,mode})})).json();
   if(d.error){$('ord-msg').innerHTML=`<span class="neg">${d.error}</span>`;return}
   $('ordermodal').classList.remove('on');
-  if(chatStarted) appendMsg('agent',`✅ ${LANG==='zh'?`已开仓 ${asset} $${notionalUsd}（${mode==='LIVE'?'实盘':'虚拟盘'}）。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${asset} $${notionalUsd}.`}`);
+  if(chatStarted) appendMsg('agent',`✅ ${LANG==='zh'?`已开仓 ${asset} $${notionalUsd}。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${asset} $${notionalUsd}.`}`);
   loadMe();
 }
 
