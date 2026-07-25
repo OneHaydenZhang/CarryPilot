@@ -90,8 +90,31 @@
   .cn{display:inline-block;transition:.25s}
   .livepill{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);border:1px solid var(--border);border-radius:20px;padding:5px 13px;margin-bottom:14px}
   .livepill i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.6s ease-in-out infinite}
+  /* Agent 能力 */
+  .agentcap{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:center}
+  .caplist{display:flex;flex-direction:column;gap:12px}
+  .capitem{display:flex;gap:13px;align-items:flex-start;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:15px 17px;transition:.2s}
+  .capitem:hover{border-color:var(--purple);transform:translateX(4px)}
+  .capitem .ci{font-size:22px;line-height:1.2}
+  .capitem b{display:block;margin-bottom:3px}.capitem p{color:var(--dim);font-size:13px}
+  /* Agent 回合环形图 */
+  .loop{position:relative;aspect-ratio:1;max-width:380px;margin:0 auto;width:100%}
+  .loop .core{position:absolute;inset:32%;border-radius:50%;background:radial-gradient(circle,rgba(167,139,250,.25),rgba(46,230,168,.08));border:1px solid var(--purple);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;animation:corepulse 3s ease-in-out infinite}
+  @keyframes corepulse{0%,100%{box-shadow:0 0 30px rgba(167,139,250,.15)}50%{box-shadow:0 0 50px rgba(167,139,250,.35)}}
+  .loop .core b{font-size:15px}.loop .core span{font-size:11px;color:var(--dim)}
+  .loop .node{position:absolute;width:34%;text-align:center}
+  .loop .node .dot{display:inline-block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 10px;font-size:12px;font-weight:600;transition:.2s}
+  .loop .ring{position:absolute;inset:6%;border-radius:50%;border:1px dashed var(--border);animation:spin 30s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* 经济飞轮 */
+  .econ{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .estep{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;position:relative}
+  .estep .en{position:absolute;top:10px;right:12px;color:var(--purple);font-weight:800;font-size:12px;opacity:.6}
+  .estep .ei{font-size:28px;margin-bottom:8px}
+  .estep b{display:block;font-size:14px;margin-bottom:4px}.estep p{color:var(--dim);font-size:12px}
+  .flywheel{text-align:center;color:var(--green);font-weight:700;margin-top:14px;font-size:14px}
   @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(46,230,168,.6)}50%{opacity:.5;box-shadow:0 0 0 5px rgba(46,230,168,0)}}
-  @media(max-width:720px){.hero h1{font-size:32px}.example{grid-template-columns:1fr}h2.sec{font-size:24px}.wrap{padding:0 18px}}
+  @media(max-width:720px){.hero h1{font-size:32px}.example{grid-template-columns:1fr}h2.sec{font-size:24px}.wrap{padding:0 18px}.agentcap{grid-template-columns:1fr}.loop{max-width:300px}}
 </style>
 </head>
 <body>
@@ -184,6 +207,43 @@
     <div class="step"><div class="num">STEP 3 🤖</div><h3>创建 Agent</h3><p>选标的、风格、资金、回合数（≤120），用结构化模板给 AI 定偏好。INJ 积分是燃料，每回合消耗。</p></div>
     <div class="step"><div class="num">STEP 4 ⚙️</div><h3>Agent 逐回合工作</h3><p>每 60 秒：拉最新费率 → 算成本 → AI 评估（带历史复盘记忆）→ 风控硬门 → 开仓/换仓/清仓，换仓前先算磨损是否划算，每步理由入日志。</p></div>
     <div class="step"><div class="num">STEP 5 📈</div><h3>观测与复盘</h3><p>预测 vs 实际曲线、48h 三情景风险预测、平仓自动复盘沉淀为记忆，喂给下一次决策 —— 越跑越懂这个市场。</p></div>
+  </div>
+
+  <h2 class="sec reveal">🤖 不止是工具，是一支 Agent 舰队</h2>
+  <p class="sub reveal">每个 Agent 是独立、有记忆、会学习的自治单元 —— 感知费率、算成本、判断、风控、执行、复盘，每 10 分钟自主循环一次</p>
+  <div class="agentcap reveal">
+    <div class="caplist">
+      <div class="capitem"><span class="ci">🧠</span><div><b>感知-推理-行动闭环</b><p>拉最新费率 → 确定性算成本后净APR → AI 判断可持续性 → RiskGuard 硬门 → 开/换/清仓，全自动无需盯盘。</p></div></div>
+      <div class="capitem"><span class="ci">📚</span><div><b>记忆与复盘学习</b><p>每笔平仓自动沉淀教训（预估 vs 实现、退出原因），喂回后续决策 —— Agent 越跑越懂这个市场。</p></div></div>
+      <div class="capitem"><span class="ci">🎭</span><div><b>多风格 + 可注入偏好</b><p>保守/均衡/激进三种人格，还能用结构化模板给 AI 定标的白名单、回避条件、最低置信度。</p></div></div>
+      <div class="capitem"><span class="ci">🛰️</span><div><b>多 Agent 并行运营</b><p>同时跑多个 Agent（不同标的/风格/虚拟或实盘），Agent 中心统一观测胜率、回合、PnL 与决策日志。</p></div></div>
+    </div>
+    <div class="loop">
+      <div class="ring"></div>
+      <div class="core"><b>🤖 Agent</b><span>每 10min 一回合</span></div>
+      <div class="node" style="top:0;left:33%"><span class="dot">① 感知费率</span></div>
+      <div class="node" style="top:28%;right:0"><span class="dot">② 算成本</span></div>
+      <div class="node" style="bottom:8%;right:6%"><span class="dot">③ AI 判断</span></div>
+      <div class="node" style="bottom:0;left:33%"><span class="dot">④ 风控</span></div>
+      <div class="node" style="bottom:8%;left:6%"><span class="dot">⑤ 执行</span></div>
+      <div class="node" style="top:28%;left:0"><span class="dot">⑥ 复盘记忆</span></div>
+    </div>
+  </div>
+
+  <h2 class="sec reveal">🥷 与 Injective 深度结合 · 经济飞轮</h2>
+  <p class="sub reveal">Injective 是 CarryPilot 的身份、燃料与信任层 —— 不是装饰性的「上链」，而是驱动平台运转的经济内核</p>
+  <div class="econ reveal">
+    <div class="estep"><div class="en">01</div><div class="ei">💰</div><b>充值 INJ</b><p>用户向平台金库转原生 INJ</p></div>
+    <div class="estep"><div class="en">02</div><div class="ei">⚡</div><b>兑换积分</b><p>链上扫描·txhash 幂等入账<br>1 INJ = N 积分</p></div>
+    <div class="estep"><div class="en">03</div><div class="ei">⛽</div><b>积分即燃料</b><p>Agent 每回合消耗积分运营</p></div>
+    <div class="estep"><div class="en">04</div><div class="ei">📈</div><b>产出收益</b><p>Agent 自主套利收资金费</p></div>
+    <div class="estep"><div class="en">05</div><div class="ei">📜</div><b>链上回执</b><p>平仓摘要哈希锚定 Injective<br>不可篡改的诚信凭证</p></div>
+  </div>
+  <div class="flywheel reveal">🔁 用得越多 → 烧的积分越多 → 对 INJ 的真实需求越大 → 可持续经济飞轮</div>
+  <div class="grid reveal" style="margin-top:18px">
+    <div class="card"><h3>🪪 链上身份</h3><p>Agent 经 Injective 注册（ERC-8004 路线），第三方可验证「这是真实、可调用的 Agent」，而非黑箱脚本。</p></div>
+    <div class="card"><h3>🔗 精确归属</h3><p>EVM 登录地址推导对应 Injective 原生地址，用户从自己钱包转账即自动归属，无需中心化映射表。</p></div>
+    <div class="card"><h3>🌐 数据可扩展</h3><p>Injective 自身链上永续市场可作为未来跨所腿接入统一引擎（当前聚焦 HL 单所站内套利）。</p></div>
   </div>
 
   <h2 class="sec reveal">五大中心 + 设置</h2>

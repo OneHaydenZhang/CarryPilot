@@ -58,7 +58,9 @@
   .opp .grossv{color:var(--dim);font-size:12px;text-decoration:line-through rgba(255,93,108,.6)}
   .opp.sel{border-color:var(--blue)}
   #opp-detail{background:var(--panel);border:1px solid var(--blue);border-radius:16px;padding:22px;margin-top:14px;animation:fade .2s}
-  .agent{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;position:relative;overflow:hidden}
+  #agents-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+  .agent{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;position:relative;overflow:hidden}
+  @media(max-width:760px){#agents-list{grid-template-columns:1fr}}
   .agent::before{content:"";position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--dim)}
   .agent.running::before{background:linear-gradient(180deg,var(--green),#1bc4ff)}
   .agent .hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -646,30 +648,31 @@ function renderAgents(){
     const pnl=pos.reduce((s,p)=>s+p.pnlUsd,0);
     const roundsPct=Math.min(100,((a.rounds||0)/(a.maxRounds||120))*100);
     const styleTag={conservative:['🛡 '+(LANG==='zh'?'保守':'Consv'),'t-paper'],balanced:['⚖️ '+(LANG==='zh'?'均衡':'Bal'),'t-pur'],aggressive:['🔥 '+(LANG==='zh'?'激进':'Aggr'),'t-warn']}[a.style];
-    return `<div class="agent ${a.status==='RUNNING'?'running':''}">
-      <div class="hd"><b style="cursor:pointer" onclick="openAgentDetail('${a.id}')">🤖 ${a.name} <span class="dim" style="font-size:11px">›</span></b>
+    const lastLog=a.log[a.log.length-1];
+    return `<div class="agent ${a.status==='RUNNING'?'running':''}" style="cursor:pointer" onclick="openAgentDetail('${a.id}')">
+      <div class="hd">
+        <b>🤖 ${a.name}</b>
         <span class="tag ${a.mode==='LIVE'?'t-live':'t-paper'}">${a.mode==='LIVE'?'⚡ '+(LANG==='zh'?'实盘':'LIVE'):'🧪 '+(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
-        <span class="tag ${styleTag[1]}">${styleTag[0]}</span>
-        <span class="tag ${a.status==='RUNNING'?'t-ok':'t-no'}">${a.status==='RUNNING'?'● '+(LANG==='zh'?'运行中':'RUNNING'):'⏸ '+(LANG==='zh'?'已停止':'STOPPED')}</span>
-        <span class="tag t-no">${a.asset==='ALL'?(LANG==='zh'?'全市场':'ALL'):a.asset}</span>
-        ${a.customPrompt?`<span class="tag t-pur">📝 LLM</span>`:''}
+        <span class="tag ${a.status==='RUNNING'?'t-ok':'t-no'}">${a.status==='RUNNING'?'●':'⏸'} ${a.status==='RUNNING'?(LANG==='zh'?'运行':'RUN'):(LANG==='zh'?'停止':'STOP')}</span>
         <span style="flex:1"></span>
-        <span class="${pnl>=0?'pos':'neg'}" style="font-weight:800;font-size:16px">${usd(pnl)}</span>
-        <button class="btn ghost mini" onclick="openAgentDetail('${a.id}')">${I18N.viewDetail[LANG==='zh'?0:1]}</button>
+        <span class="${pnl>=0?'pos':'neg'}" style="font-weight:800;font-size:17px">${usd(pnl)}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <span class="tag ${styleTag[1]}">${styleTag[0]}</span>
+        <span class="tag t-no">${a.asset==='ALL'?(LANG==='zh'?'全市场':'ALL'):a.asset}</span>
+        <span class="tag t-no">$${a.capitalUsd}</span>
+        ${a.customPrompt?`<span class="tag t-pur">📝 LLM</span>`:''}
+        ${open?`<span class="tag t-ok">📌 ${open.asset}</span>`:`<span class="tag t-no">${LANG==='zh'?'空仓':'idle'}</span>`}
+      </div>
+      <div class="dim" style="font-size:11px;margin-top:10px;display:flex;justify-content:space-between"><span>${LANG==='zh'?'回合':'rounds'} ${a.rounds||0}/${a.maxRounds||120}</span>${a.memory&&a.memory.length?`<span>🧠 ${a.memory.length} ${LANG==='zh'?'条记忆':'memories'}</span>`:''}</div>
+      <div class="rounds"><i style="width:${roundsPct}%"></i></div>
+      ${last&&last.series&&last.series.length>1?`<svg class="chart" id="pv-${a.id}" height="60" preserveAspectRatio="none" style="margin-top:10px"></svg>`:''}
+      <div style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:11px;color:var(--dim);min-height:34px">${lastLog?`<span class="dim">${new Date(lastLog.at).toLocaleTimeString()}</span> ${lastLog.msg}`:'…'}</div>
+      <div style="display:flex;gap:6px;margin-top:10px" onclick="event.stopPropagation()">
+        <button class="btn ghost mini" onclick="openAgentDetail('${a.id}')" style="flex:1">${I18N.viewDetail[LANG==='zh'?0:1]} →</button>
+        ${open?`<button class="btn ghost mini" onclick="closePos('${open.id}')">${LANG==='zh'?'平仓':'Close'}</button>`:''}
         ${a.status==='RUNNING'?`<button class="btn ghost mini" onclick="agentAction('${a.id}','stop')">${LANG==='zh'?'停止':'Stop'}</button>`:`<button class="btn ghost mini" onclick="agentAction('${a.id}','start')">${LANG==='zh'?'启动':'Start'}</button><button class="btn danger mini" onclick="agentAction('${a.id}','delete')">✕</button>`}
       </div>
-      <div class="dim" style="font-size:11px;margin-top:8px">$${a.capitalUsd} · ${LANG==='zh'?'回合':'rounds'} ${a.rounds||0}/${a.maxRounds||120}</div>
-      <div class="rounds"><i style="width:${roundsPct}%"></i></div>
-      ${open?`<div style="margin-top:10px;font-size:13px">📌 ${LANG==='zh'?'持仓':'Position'}: <b>${open.asset}</b> $${open.notionalUsd.toFixed(0)} · ${fmt(open.currentHourlyFundingPct,5)}/h · funding <span class="pos">${usd(open.fundingAccruedUsd)}</span> · PnL <span class="${open.pnlUsd>=0?'pos':'neg'}">${usd(open.pnlUsd)}</span>
-        <button class="btn ghost mini" onclick="closePos('${open.id}')">${LANG==='zh'?'手动平仓':'Close'}</button></div>`:''}
-      ${last&&last.series&&last.series.length>1?`
-        <div class="sec-t">${LANG==='zh'?'预测 vs 实际（当前/最近仓位）':'Predicted vs actual'}<span class="tip" data-t="蓝色虚线=开仓时按入场费率外推的理论收益；绿色实线=实际收益。两线贴合说明费率稳定；实线掉队说明费率在衰减，接近退出线时 Agent 会自动清仓">?</span></div>
-        <svg class="chart" id="pv-${a.id}" height="84" preserveAspectRatio="none"></svg>
-        <div class="legend"><span><i style="background:var(--blue)"></i>${LANG==='zh'?'入场预测':'predicted'}</span><span><i style="background:var(--green)"></i>${LANG==='zh'?'实际':'actual'}</span>
-        ${last.deviationNote?`<span class="dim">· ${last.deviationNote}</span>`:''}</div>`:''}
-      ${a.memory&&a.memory.length?`<div class="sec-t">🧠 ${LANG==='zh'?'复盘记忆（自动沉淀，喂给后续 AI 决策学习）':'Review memory (fed back into AI decisions)'}<span class="tip" data-t="每笔平仓后 Agent 自动生成复盘：入场预估 vs 实现收益、退出原因、可复用的教训。最近 3 条会作为上下文进入下一次 AI 开仓评估，形成学习闭环">?</span></div>
-      <div class="log" style="max-height:120px;border-color:var(--purple)">${[...a.memory].reverse().map(m=>`<div>🧠 <b>${m.asset}</b> ${usd(m.pnlUsd)} · ${LANG==='zh'?'预估':'est'} ${fmt(m.entryNetApr,1)} → ${LANG==='zh'?'实现':'got'} ${fmt(m.realizedApr,1)} · ${m.lesson}</div>`).join('')}</div>`:''}
-      <div class="log">${[...a.log].reverse().map(l=>`<div><span class="dim">${new Date(l.at).toLocaleTimeString()}</span> ${l.msg}</div>`).join('')||'<div>…</div>'}</div>
     </div>`}).join('');
   mine.forEach(a=>{
     const pos=ME.positions.filter(p=>p.agentId===a.id);
@@ -677,7 +680,7 @@ function renderAgents(){
     if(last&&last.series&&last.series.length>1&&$('pv-'+a.id)){
       lineChart($('pv-'+a.id),[
         {data:last.series.map(s=>s.predictedPnlUsd),color:'var(--blue)',dash:true},
-        {data:last.series.map(s=>s.pnlUsd),color:'var(--green)'}],84,
+        {data:last.series.map(s=>s.pnlUsd),color:'var(--green)'}],60,
         [new Date(last.entryAt).toLocaleTimeString(),LANG==='zh'?'现在':'now'],v=>'$'+v.toFixed(2));
     }
   });
