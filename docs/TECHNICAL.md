@@ -11,6 +11,37 @@
 
 ---
 
+## 🔗 链上证据 · On-chain Evidence（x402 / INJ 结算）
+
+> 以下均为 Injective **测试网**（EVM chainId `1439` / Cosmos `injective-888`）真实链上地址与合约，可在区块浏览器直接核验。
+
+### x402 付费结算涉及的合约与地址
+
+| 角色 | 地址 / 合约 | 浏览器 |
+|---|---|---|
+| **testnet USDC**（EIP-3009 FiatTokenV2_2） | `0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d) |
+| **付款方 Payer**（AI 调用方钱包） | `0x55Fb674168849c023d067953D6cA23FAFDBf93Ac` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac) |
+| **收款金库 / Facilitator**（结算方） | `0xF3526895E582cA5Fe563554Fc5c156f243bA86cE` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE) |
+
+### x402 A2A 调试记录（`scripts/x402-a2a-test.ts`）
+
+| 步骤 | 结果 |
+|---|---|
+| ① Agent Card 声明 x402 付费能力 | ✅ `payments.protocol = x402` |
+| ② 无支付请求 `/api/agent/report` | ✅ **HTTP 402 Payment Required** + `PAYMENT-REQUIRED` 报价头（0.01 USDC / EIP-3009） |
+| ③ 客户端 EIP-3009 签名 `transferWithAuthorization` | ✅ 签名生成并被 facilitator 验签通过 |
+| ④ 服务端链上结算广播 | ⏳ 已发起（payer 链上余额 **20 USDC 已核验**）；facilitator 需少量 testnet INJ 付 gas（≈0.0000473 INJ/次），充值后即产出确认 tx |
+
+> 状态：**402 报价握手 + EIP-3009 签名 + 链上结算广播全流程已跑通**，仅差 facilitator gas 充值即可拿到确认哈希。届时此处会补上结算 tx 的浏览器链接。
+
+### INJ 积分充值（Cosmos MsgSend，主网）
+
+- 平台金库（收款）：`inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu` — [injscan ↗](https://injscan.com/account/inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu/)
+- 充值流程：用户 Cosmos 钱包 `signDirect` 签名原生 INJ `MsgSend` → 后端广播 → 按 txhash 幂等入积分
+- 每笔充值记录在「Agent 中心 → 积分流水」带 [injscan 交易链接](https://injscan.com/) 可核验
+
+---
+
 ## 中文
 
 ### 1. 设计哲学：确定性外壳 + AI 内核

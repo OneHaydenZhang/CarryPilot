@@ -12,7 +12,7 @@
 [![Chain](https://img.shields.io/badge/Hyperliquid-🌊-4d9fff?style=for-the-badge)](https://hyperliquid.xyz)
 [![Injective](https://img.shields.io/badge/Injective-🥷-a78bfa?style=for-the-badge)](https://injective.com)
 
-**产品文档 (中文)** · [English Product Doc](#-english) · [🔧 技术文档 / Technical Doc](./docs/TECHNICAL.md)
+**产品文档 (中文)** · [English Product Doc](#-english) · [📗 详细产品文档 / Product Doc](./docs/PRODUCT.md) · [🔧 技术文档 / Technical Doc](./docs/TECHNICAL.md)
 
 </div>
 
@@ -135,7 +135,18 @@ npm run web                           # 启动 → http://localhost:8080
 
 **Injective**: identity, fuel & trust layer. Agents burn INJ credits per round (top up in one click via Keplr/Leap/OKX; on-chain deposits verifiable in the explorer). Agent identity and closed-position receipt hashes are anchored on Injective.
 
-See the **[🔧 Technical Doc](./docs/TECHNICAL.md)** for architecture and implementation.
+See the **[🔧 Technical Doc](./docs/TECHNICAL.md)** for architecture and implementation, and the **[📗 Product Doc](./docs/PRODUCT.md)** for a full panel-by-panel walkthrough.
+
+### 🔗 链上证据 · On-chain Evidence
+
+| 项目 | 地址 / 合约 | 浏览器 |
+|---|---|---|
+| INJ 积分金库（Cosmos MsgSend 主网收款） | `inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu` | [injscan ↗](https://injscan.com/account/inj18j9etc23pka9rhzy36qlchqrpttqm38mku0huu/) |
+| x402 testnet USDC（EIP-3009） | `0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x0C382e685bbeeFE5d3d9C29e29E341fEE8E84C5d) |
+| x402 付款方 Payer（20 USDC 已核验） | `0x55Fb674168849c023d067953D6cA23FAFDBf93Ac` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac) |
+| x402 收款金库 / Facilitator | `0xF3526895E582cA5Fe563554Fc5c156f243bA86cE` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE) |
+
+> INJ 充值：用户 Cosmos 钱包 `signDirect` 签名原生 INJ `MsgSend` → 后端广播 → 按 txhash 幂等入积分；每笔在「Agent 中心 → 积分流水」附 injscan 交易链接。x402 详细调试记录见[技术文档开头](./docs/TECHNICAL.md#-链上证据--on-chain-evidencex402--inj-结算)。
 
 ---
 
