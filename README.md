@@ -8,6 +8,7 @@
 *Don't predict the market — let agents harvest funding.*
 
 [![Status](https://img.shields.io/badge/status-live%20on%20mainnet-2ee6a8?style=for-the-badge)](#)
+[![Platform](https://img.shields.io/badge/🛰️_Multi--Agent-Arbitrage_Platform-a78bfa?style=for-the-badge)](#)
 [![Chain](https://img.shields.io/badge/Hyperliquid-🌊-4d9fff?style=for-the-badge)](https://hyperliquid.xyz)
 [![Injective](https://img.shields.io/badge/Injective-🥷-a78bfa?style=for-the-badge)](https://injective.com)
 [![Hackathon](https://img.shields.io/badge/AdventureX-2026-ffb454?style=for-the-badge)](#)
