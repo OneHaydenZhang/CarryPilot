@@ -166,6 +166,10 @@
   .ptaddr{display:flex;flex-direction:column;gap:8px}
   .ptaddr>div{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .ptaddr code{word-break:break-all;font-size:11.5px}
+  .ptpresets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .ptpreset .p1{font-size:14px;font-weight:800}.ptpreset .p2{color:var(--green);font-size:11px;margin-top:1px}
+  .pt-ledger{margin-top:16px;border-top:1px solid var(--border);padding-top:10px}
+  .pt-ledger summary{cursor:pointer;font-size:12px;color:var(--dim);font-weight:600}
   .cbtn{cursor:pointer;color:var(--blue);font-size:11px;border:1px solid var(--border);border-radius:6px;padding:1px 7px}
   .typing{display:flex;gap:3px;padding:4px 2px}
   .typing i{width:5px;height:5px;border-radius:50%;background:var(--dim);animation:typedot 1.2s infinite ease-in-out}
@@ -345,7 +349,7 @@
       <span class="chip" data-ws="LIVE">⚡ <span data-i18n="wsLive">实盘</span></span>
       <span class="dim" style="font-size:12px" id="ws-note"></span>
     </div>
-    <div class="panel" id="fuel-banner" style="display:none;border-color:var(--amber)"></div>
+    <div class="panel" id="points-panel" style="display:none;font-size:13px"></div>
     <div class="cards" id="agent-stats"></div>
     <div class="panel" id="need-login-agents" style="display:none" data-i18n="needLogin">请先连接钱包。</div>
     <div id="create-bar" style="display:none;margin:6px 0 16px">
@@ -380,16 +384,6 @@
     <div class="panel">
       <b>🔗 <span data-i18n="setWallet">钱包</span></b>
       <div id="set-wallet" style="font-size:13px;margin-top:8px" class="dim"></div>
-    </div>
-    <div class="panel">
-      <b>🧪 <span data-i18n="setVirtual">虚拟盘账户</span></b>
-      <div class="dim" style="font-size:12px;margin:6px 0" data-i18n="setVirtualDesc">虚拟盘用于零风险体验。设置一个虚拟资金额度，虚拟盘 Agent 从中划拨仓位（不涉及任何真实资金）。</div>
-      <div id="virtual-setup" style="font-size:13px"></div>
-    </div>
-    <div class="panel">
-      <b>⚡ <span data-i18n="ptTitle">INJ 积分（Agent 燃料）</span></b>
-      <div class="dim" style="font-size:12px;margin:6px 0" data-i18n="ptDesc">Agent 每回合消耗积分。向平台金库转原生 INJ 充值，按 sender 自动归属、txhash 幂等。</div>
-      <div id="points-panel" style="font-size:13px"></div>
     </div>
     <div class="panel">
       <b>⚡ <span data-i18n="liveTitle">交易授权（实盘）</span></b>
@@ -734,7 +728,7 @@ async function loadMe(){
 const wsAgents=()=>ME.agents.filter(a=>a.mode===WORKSPACE);
 const wsPos=()=>ME.positions.filter(p=>p.mode===WORKSPACE);
 const wsSum=()=>ME.summary[WORKSPACE]||{totalPnl:0,openCount:0,fundingAccrued:0};
-function renderAll(){renderWsNote();renderFuel();renderAgentStats();renderAgents();renderEarnings();renderRisk();renderLiveSetup();renderPoints();renderSettings();renderVirtual()}
+function renderAll(){renderWsNote();renderAgentStats();renderAgents();renderEarnings();renderRisk();renderLiveSetup();renderPoints();renderSettings()}
 function renderWsNote(){
   const el=$('ws-note');if(!el)return;
   el.textContent=WORKSPACE==='PAPER'
@@ -938,63 +932,68 @@ function renderRisk(){
   });
 }
 
-/* ---------- points / live（隐蔽式充值：一键钱包转账，不暴露任何地址）---------- */
-const INJ_EVM_CHAIN='0x6f0'; // 1776
+/* ---------- INJ 积分（完全对齐 Manek：Cosmos 钱包 signDirect + 后端 build/submit）---------- */
+const _injCosmosWallet=()=>window.keplr?{name:'Keplr',w:window.keplr}:window.leap?{name:'Leap',w:window.leap}:(window.okxwallet&&window.okxwallet.keplr)?{name:'OKX',w:window.okxwallet.keplr}:window.owallet?{name:'OWallet',w:window.owallet}:null;
+const _b64ToBytes=b64=>{const s=atob(b64),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a};
+const _bytesToB64=bytes=>{const a=new Uint8Array(bytes);let s='';for(let i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s)};
 function renderPoints(){
   const p=ME.points;const chip=$('pointsChip');
   chip.style.display='inline-flex';chip.textContent='⚡ '+p.balance.toFixed(1);
-  const presets=(p.presets||[]).map(pts=>{const inj=(pts/p.rateInj);return `<button class="ptpreset" onclick="depositCredits(${pts},${inj},this)"><div class="p1">+${pts} ${LANG==='zh'?'积分':'pts'}</div><div class="p2">${inj} INJ</div></button>`}).join('');
-  $('points-panel').innerHTML=`
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px">
-      <div><div class="dim" style="font-size:11px">${LANG==='zh'?'当前余额':'Balance'}</div><div style="font-size:26px;font-weight:800">⚡ ${p.balance.toFixed(1)}</div></div>
-      <div class="dim" style="font-size:12px">${LANG==='zh'?`每回合消耗 ${p.perTick} · 1 INJ = ${p.rateInj} 积分`:`${p.perTick}/round · 1 INJ = ${p.rateInj} pts`}</div>
+  const el=$('points-panel');if(!el)return;el.style.display='block';
+  const presets=(p.presets||[]).map(pts=>{const inj=+(pts/p.rateInj).toFixed(6);return `<button class="ptpreset" onclick="depositCredits(${pts},this)"><div class="p1">+${pts} ${LANG==='zh'?'积分':'pts'}</div><div class="p2">${inj} INJ</div></button>`}).join('');
+  el.innerHTML=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div>
+        <div class="dim" style="font-size:11px;letter-spacing:.06em">⚡ INJ CREDITS</div>
+        <div style="font-size:30px;font-weight:800;margin:2px 0">${p.balance.toFixed(0)} <span style="font-size:14px" class="dim">${LANG==='zh'?'积分':'credits'}</span></div>
+        <div class="dim" style="font-size:12px">${LANG==='zh'?`每回合 ${p.perTick} · 1 INJ = ${p.rateInj} 积分`:`Per round ${p.perTick} · 1 INJ = ${p.rateInj}`} · <span class="tag t-no">${p.network||'mainnet'}</span></div>
+      </div>
+      ${p.configured?`<div style="min-width:280px;flex:1;max-width:420px">
+        <div class="dim" style="font-size:11px;letter-spacing:.06em;margin-bottom:2px">${LANG==='zh'?'⚡ 用 INJ 充值':'TOP UP WITH INJ'}</div>
+        <div class="dim" style="font-size:12px;margin-bottom:8px">${LANG==='zh'?'选金额 → 钱包弹出转 INJ，自动入积分。':'Pick an amount — your wallet opens to send INJ; credited automatically.'}</div>
+        <div class="ptpresets">${presets}</div>
+        <div style="margin-top:8px"><button class="btn ghost mini" onclick="loadMe()">${LANG==='zh'?'刷新积分':'Refresh credits'}</button></div>
+        <div id="pt-msg" class="dim" style="font-size:12px;margin-top:6px;min-height:16px"></div>
+      </div>`:`<div class="t-warn tag">${LANG==='zh'?'INJ 充值尚未配置':'INJ top-up not configured'}</div>`}
     </div>
-    ${p.configured?`
-    <div class="dim" style="font-size:12.5px;margin-bottom:8px">${LANG==='zh'?'选择套餐 → 钱包弹出确认转账，到账后自动入积分。':'Pick an amount — your wallet opens to send INJ; credited automatically.'}</div>
-    <div class="ptpresets">${presets}</div>
-    <div id="pt-msg" class="dim" style="font-size:12.5px;margin-top:8px;min-height:18px"></div>
-    <div class="sec-t">${LANG==='zh'?'积分流水':'Credit ledger'} <span class="dim" style="font-size:11px;cursor:pointer" onclick="loadPtHistory()">↻</span></div>
-    <div id="pt-history" class="dim" style="font-size:12px">${LANG==='zh'?'加载中…':'loading…'}</div>`
-    :`<span class="t-warn tag">${LANG==='zh'?'INJ 充值尚未配置（待运营方设置）':'INJ top-up not configured yet'}</span>`}`;
+    ${p.configured?`<details class="pt-ledger" open><summary>${LANG==='zh'?'积分流水':'Ledger'}</summary><div id="pt-history" class="dim" style="font-size:12px;margin-top:8px">${LANG==='zh'?'加载中…':'loading…'}</div></details>`:''}`;
   if(p.configured) loadPtHistory();
 }
-// 一键充值：拉起 MetaMask，向金库（EVM 0x，地址不展示）转原生 INJ，然后扫描入账
-async function depositCredits(pts,inj,btn){
-  const msg=$('pt-msg');
-  if(!eth){eth=providers[0]?.provider||window.ethereum}
-  if(!eth){if(msg)msg.textContent=LANG==='zh'?'请先连接钱包':'Connect wallet first';return}
-  const to=ME.points.treasuryEvm;
-  if(!to){if(msg)msg.textContent=LANG==='zh'?'充值暂未开放':'Top-up unavailable';return}
-  btn.disabled=true;if(msg){msg.style.color='';msg.textContent=LANG==='zh'?'请在钱包中确认转账…':'Confirm in your wallet…'}
+// 一键充值（Manek 流程）：build → Cosmos 钱包 signDirect → submit
+async function depositCredits(credits,btn){
+  const msg=$('pt-msg');const zh=LANG==='zh';
+  const cw=_injCosmosWallet();
+  if(!cw){if(msg){msg.style.color='var(--red)';msg.textContent=zh?'未检测到 Keplr/Leap/OKX 钱包':'No Keplr/Leap/OKX wallet detected'}return}
+  const chainId=(ME.points.network==='testnet')?'injective-888':'injective-1';
+  if(btn)btn.disabled=true;
   try{
-    // 确保在 Injective EVM (1776)
-    const cid=await eth.request({method:'eth_chainId'});
-    if(cid!==INJ_EVM_CHAIN){
-      try{await eth.request({method:'wallet_switchEthereumChain',params:[{chainId:INJ_EVM_CHAIN}]});}
-      catch(e){await eth.request({method:'wallet_addEthereumChain',params:[{chainId:INJ_EVM_CHAIN,chainName:'Injective EVM',nativeCurrency:{name:'Injective',symbol:'INJ',decimals:18},rpcUrls:['https://sentry.evm-rpc.injective.network/'],blockExplorerUrls:['https://blockscout.injective.network/']}]});}
-    }
-    // value = inj * 1e18（用字符串避免精度问题）
-    const wei=BigInt(Math.round(inj*1e6))*(10n**12n);
-    const tx=await eth.request({method:'eth_sendTransaction',params:[{from:addr,to,value:'0x'+wei.toString(16)}]});
-    if(msg)msg.textContent=LANG==='zh'?'转账已提交，正在确认入账…':'Sent, crediting…';
-    // 轮询扫描入账
-    let credited=false;
-    for(let i=0;i<6&&!credited;i++){await new Promise(r=>setTimeout(r,4000));
-      const d=await (await authFetch('/api/points/refresh',{method:'POST'})).json();
-      if(d.credited){credited=true;if(msg){msg.style.color='var(--green)';msg.textContent=`✅ ${LANG==='zh'?'充值成功':'done'} +${d.creditedPoints.toFixed(0)}`}loadMe()}}
-    if(!credited&&msg)msg.textContent=LANG==='zh'?'转账已发送，稍后点 ↻ 刷新积分即可入账':'Sent — tap ↻ shortly to credit';
-  }catch(e){if(msg){msg.textContent=(LANG==='zh'?'已取消或失败：':'cancelled/failed: ')+String(e.message||e).slice(0,80)}}
-  finally{btn.disabled=false}
+    if(msg){msg.style.color='';msg.textContent=zh?'连接钱包…':'connecting wallet…'}
+    await cw.w.enable(chainId);
+    const key=await cw.w.getKey(chainId);
+    const pubkey=_bytesToB64(key.pubKey);
+    const b=await (await authFetch('/api/points/deposit/build',{method:'POST',body:JSON.stringify({credits,pubkey,sender_inj:key.bech32Address})})).json();
+    if(b.error)throw new Error(b.error);
+    const Long=(await import('https://esm.sh/long@5')).default;
+    if(msg)msg.textContent=zh?'请在钱包中确认转账…':'confirm the transfer in your wallet…';
+    const signed=await cw.w.signDirect(chainId,key.bech32Address,{bodyBytes:_b64ToBytes(b.bodyBytes),authInfoBytes:_b64ToBytes(b.authInfoBytes),chainId:b.chainId,accountNumber:Long.fromString(String(b.accountNumber))});
+    if(msg)msg.textContent=zh?'广播中并结算积分…':'broadcasting & crediting…';
+    const r=await (await authFetch('/api/points/deposit/submit',{method:'POST',body:JSON.stringify({bodyBytes:_bytesToB64(signed.signed.bodyBytes),authInfoBytes:_bytesToB64(signed.signed.authInfoBytes),signature:signed.signature.signature})})).json();
+    if(r.error)throw new Error(r.error);
+    if(msg){msg.style.color='var(--green)';msg.textContent=(zh?'充值成功 ✓ 余额 ':'done ✓ balance ')+r.balance.toFixed(0)}
+    loadMe();
+  }catch(e){if(msg){msg.style.color='var(--red)';msg.textContent=(zh?'失败: ':'failed: ')+String((e&&e.message)||e).slice(0,120)}}
+  finally{if(btn)btn.disabled=false}
 }
+const injScanTx=h=>`https://injscan.com/transaction/${h}/`;
 async function loadPtHistory(){
   const el=$('pt-history');if(!el)return;
   try{
     const d=await (await authFetch('/api/points')).json();
-    const rows=(d.history||[]).filter(h=>h.kind!=='tick').slice(0,20);
-    el.innerHTML=rows.length?`<div style="overflow-x:auto"><table><thead><tr><th>${LANG==='zh'?'时间':'Time'}</th><th>${LANG==='zh'?'类型':'Type'}</th><th>${LANG==='zh'?'积分':'Credits'}</th></tr></thead><tbody>${rows.map(h=>`<tr>
+    const rows=(d.history||[]).filter(h=>h.kind!=='tick').slice(0,30);
+    el.innerHTML=rows.length?`<div style="overflow-x:auto"><table><thead><tr><th>${LANG==='zh'?'时间':'Time'}</th><th>${LANG==='zh'?'类型':'Type'}</th><th style="text-align:right">Δ</th></tr></thead><tbody>${rows.map(h=>`<tr>
       <td class="dim">${new Date(h.at).toLocaleString()}</td>
-      <td>${h.kind==='deposit'?'💰 '+(LANG==='zh'?'充值':'top-up'):h.kind==='welcome'?'🎁 '+(LANG==='zh'?'赠送':'welcome'):h.kind}</td>
-      <td class="${h.points>=0?'pos':'neg'}">${h.points>=0?'+':''}${h.points.toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`
+      <td>${h.kind==='deposit'?'💰 '+(LANG==='zh'?'充值':'top-up'):h.kind==='welcome'?'🎁 '+(LANG==='zh'?'赠送':'welcome'):h.kind}${h.note?` · <span class="dim">${h.note}</span>`:''}${h.txhash?` · <a class="ext" target="_blank" href="${injScanTx(h.txhash)}">${LANG==='zh'?'链上':'tx'} ↗</a>`:''}</td>
+      <td style="text-align:right" class="${h.points>=0?'pos':'neg'}">${h.points>=0?'+':''}${h.points.toFixed(h.points%1?1:0)}</td></tr>`).join('')}</tbody></table></div>`
       :`<span>${LANG==='zh'?'暂无记录':'No records yet'}</span>`;
   }catch(e){el.textContent='加载失败'}
 }

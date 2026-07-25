@@ -10,7 +10,7 @@ import { buildS1Candidates, ENGINE_VERSION, CONFIG, setDemo, demoFundingFor, typ
 import { loadStore, saveStore, store, virtualBalanceOf, setVirtualBalance } from '../core/store.js';
 import { tickAgents, closePosition, viewPosition, buildManualPosition, STYLE_PARAMS, LIMITS, type LiveExecutor } from '../core/agents.js';
 import { llmEnabled } from '../core/llm.js';
-import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, treasuryEvm, POINT_PRESETS, POINTS } from '../core/points.js';
+import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINT_PRESETS, creditDeposit, POINTS } from '../core/points.js';
 import { buildApproveAgentTypedData, submitApproveAgent, liveOpenCarry, liveCloseCarry, fetchLiveAccount, getOrCreateAgentWallet } from '../connectors/hlExchange.js';
 import { agentCard, classify, answerRates, answerOpportunities, handleA2A } from './agentApi.js';
 import { handleMcpRequest } from './mcpServer.js';
@@ -43,6 +43,7 @@ interface ScanState {
 let scan: ScanState | null = null;
 let scanning: Promise<ScanState> | null = null;
 const fundingHistCache = new Map<string, { at: number; data: unknown }>();
+const depositIntents = new Map<string, { credits: number; injAmount: number; at: number }>();
 
 /** 对外只展示模型家族名，不暴露路由商与版本号 */
 function llmDisplayName(): string {
@@ -274,7 +275,7 @@ const server = createServer(async (req, res) => {
         virtualBalance: virtualBalanceOf(owner),
         live: { agentAddress: wallet?.agentAddress ?? null, approved: Boolean(wallet?.approvedAt) },
         summary: { PAPER: summaryFor('PAPER'), LIVE: summaryFor('LIVE') },
-        points: { balance: balanceOf(owner), perTick: POINTS.perTick, rateInj: POINTS.rateInj, configured: Boolean(treasuryInj()), presets: POINT_PRESETS, treasuryEvm: treasuryEvm() },
+        points: { balance: balanceOf(owner), perTick: POINTS.perTick, rateInj: POINTS.rateInj, configured: Boolean(treasuryInj()), presets: POINT_PRESETS, network: config.network },
       });
     }
 
@@ -291,6 +292,42 @@ const server = createServer(async (req, res) => {
     if (path === '/api/points/refresh' && req.method === 'POST') {
       const r = await scanDepositsFor(owner);
       return json(res, 200, { ...r, balance: balanceOf(owner) });
+    }
+    // 一键充值：构造未签名 MsgSend（前端 Cosmos 钱包 signDirect）
+    if (path === '/api/points/deposit/build' && req.method === 'POST') {
+      const b = await readBody(req);
+      const treasury = treasuryInj();
+      if (!treasury) return json(res, 400, { error: 'INJ 充值未配置' });
+      const credits = Number(b.credits) || 0;
+      const injAmount = credits / POINTS.rateInj;
+      const senderInj = String(b.sender_inj ?? '');
+      const pubkey = String(b.pubkey ?? '');
+      if (injAmount <= 0 || !senderInj.startsWith('inj1') || !pubkey) return json(res, 400, { error: 'bad params' });
+      try {
+        const { buildDeposit } = await import('../connectors/injDeposit.js');
+        const built = await buildDeposit(senderInj, treasury, injAmount, pubkey);
+        depositIntents.set(owner, { credits, injAmount, at: Date.now() });
+        return json(res, 200, built);
+      } catch (err) {
+        log.error('deposit_build_failed', { error: String(err) });
+        return json(res, 502, { error: `构造交易失败: ${String(err).slice(0, 160)}` });
+      }
+    }
+    // 广播签名后的交易 → 入积分
+    if (path === '/api/points/deposit/submit' && req.method === 'POST') {
+      const b = await readBody(req);
+      const intent = depositIntents.get(owner);
+      if (!intent || Date.now() - intent.at > 10 * 60e3) return json(res, 400, { error: '充值会话过期，请重试' });
+      try {
+        const { broadcastDeposit } = await import('../connectors/injDeposit.js');
+        const { txHash } = await broadcastDeposit(String(b.bodyBytes), String(b.authInfoBytes), String(b.signature));
+        const cr = creditDeposit(owner, intent.injAmount, txHash);
+        depositIntents.delete(owner);
+        return json(res, 200, { txHash, credited: cr.credited, points: cr.points, balance: balanceOf(owner), history: historyOf(owner) });
+      } catch (err) {
+        log.error('deposit_submit_failed', { error: String(err) });
+        return json(res, 502, { error: `广播失败: ${String(err).slice(0, 200)}` });
+      }
     }
 
     if (path === '/api/agents' && req.method === 'POST') {

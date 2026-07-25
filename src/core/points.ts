@@ -29,8 +29,17 @@ export function treasuryEvm(): string {
   if (!t) return '';
   return t.startsWith('0x') ? t.toLowerCase() : injToEth(t);
 }
-/** 充值套餐（积分档位） */
-export const POINT_PRESETS = (process.env.POINTS_PRESETS ?? '1,10,50,100').split(',').map(Number).filter((n) => n > 0);
+/** 充值套餐（积分档位），对齐 Manek */
+export const POINT_PRESETS = (process.env.POINTS_PRESETS ?? '1,5,10,100,200,1000').split(',').map(Number).filter((n) => n > 0);
+
+/** 广播成功后直接入积分（幂等：txhash 去重） */
+export function creditDeposit(owner: string, injAmount: number, txHash: string): { credited: boolean; points: number } {
+  if (txHash && store.pointsTx.some((t) => t.txhash === txHash)) return { credited: false, points: 0 };
+  const pts = injAmount * POINTS.rateInj;
+  credit(owner, pts, 'deposit', { txhash: txHash, note: `deposit ${injAmount.toFixed(6)} INJ → ${pts.toFixed(0)} 积分` });
+  saveStore();
+  return { credited: true, points: pts };
+}
 
 export function balanceOf(address: string): number {
   return store.points[address.toLowerCase()] ?? 0;
