@@ -98,7 +98,29 @@
   .wopt:hover{border-color:var(--green);background:var(--panel2)}
   .wopt img{width:30px;height:30px;border-radius:8px}
   .wopt b{font-size:14px}
+  /* 对话助手 */
+  #chat-fab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;font-size:24px;z-index:80;
+    background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;box-shadow:0 8px 30px rgba(46,230,168,.35);transition:.2s}
+  #chat-fab:hover{transform:scale(1.08)}
+  #chat-panel{position:fixed;right:22px;bottom:88px;width:min(400px,94vw);height:min(600px,72vh);background:var(--panel);border:1px solid var(--border);
+    border-radius:18px;z-index:80;display:none;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  #chat-panel.on{display:flex}
+  .chat-hd{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel2)}
+  #chat-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:88%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+  .msg.u{align-self:flex-end;background:linear-gradient(135deg,var(--green),#1bc4ff);color:#04121c;border-bottom-right-radius:4px}
+  .msg.a{align-self:flex-start;background:var(--panel2);border:1px solid var(--border);border-bottom-left-radius:4px}
+  .chat-in{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
+  .chat-in input{flex:1}
+  .qcard{align-self:flex-start;max-width:94%;background:var(--panel2);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:12px;padding:12px;font-size:12px}
+  .qcard.no{border-left-color:var(--dim)}
+  .qcard .qh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .qcard .qbig{font-size:20px;font-weight:800}
+  .chat-sug{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 10px}
+  .chat-sug span{border:1px solid var(--border);border-radius:12px;padding:4px 10px;font-size:11px;color:var(--dim);cursor:pointer}
+  .chat-sug span:hover{border-color:var(--green);color:var(--text)}
   /* 移动端 */
+  @media(max-width:760px){
   @media(max-width:760px){
     html,body{overflow-x:hidden;max-width:100vw}
     main{padding:12px;overflow-x:hidden}
@@ -149,6 +171,32 @@
     <h3 data-i18n="pickWallet">选择钱包</h3>
     <div id="wlist"></div>
     <div class="dim" style="font-size:12px;margin-top:8px" data-i18n="walletNote">仅签名验证身份 — 无交易、无 gas、不触碰资金。</div>
+  </div>
+</div>
+
+<!-- 下单确认弹窗 -->
+<div class="modal-bg" id="ordermodal" onclick="if(event.target===this)this.classList.remove('on')">
+  <div class="modal" style="width:min(460px,94vw)"><div id="order-body"></div></div>
+</div>
+
+<!-- 浮动对话助手 -->
+<button id="chat-fab" onclick="toggleChat()">💬</button>
+<div id="chat-panel">
+  <div class="chat-hd">
+    <b>🛩️ CarryPilot 助手</b>
+    <span class="dim" style="font-size:11px;margin-left:6px" data-i18n="chatSub">问资费 · 问机会 · 下单</span>
+    <span style="flex:1"></span>
+    <span onclick="toggleChat()" style="cursor:pointer;color:var(--dim)">✕</span>
+  </div>
+  <div id="chat-log"></div>
+  <div class="chat-sug">
+    <span onclick="quickAsk('哪些币费率最高')">哪些币费率最高</span>
+    <span onclick="quickAsk('现在有什么套利机会')">现在有什么套利机会</span>
+    <span onclick="quickAsk('BTC 能套利吗')">BTC 能套利吗</span>
+  </div>
+  <div class="chat-in">
+    <input id="chat-input" placeholder="例：BTC 能套利吗 / 帮我做 1000u BTC" onkeydown="if(event.key==='Enter')sendChat()">
+    <button class="btn" onclick="sendChat()">发送</button>
   </div>
 </div>
 
@@ -846,6 +894,102 @@ async function closePos(id){
   if(!confirm(LANG==='zh'?'确认平仓？':'Close position?'))return;
   const r=await authFetch('/api/positions/close',{method:'POST',body:JSON.stringify({id})});
   const d=await r.json();if(d.error)alert(d.error);loadMe();
+}
+
+/* ---------- 对话助手 + 确认下单（Level 2）---------- */
+let chatInited=false;
+function toggleChat(){
+  const p=$('chat-panel');p.classList.toggle('on');
+  if(p.classList.contains('on')&&!chatInited){chatInited=true;
+    pushMsg('a', LANG==='zh'?'你好，我是 CarryPilot 助手 🛩️\n我能查资金费率、找套利机会，确认后还能帮你下单。试试下面的问题，或直接说「帮我做 1000u BTC」。':'Hi! I can check funding rates, find arbitrage, and place orders on confirm.');
+  }
+}
+function quickAsk(q){$('chat-input').value=q;sendChat()}
+function pushMsg(who,text){const d=document.createElement('div');d.className='msg '+who;d.textContent=text;$('chat-log').appendChild(d);$('chat-log').scrollTop=1e9;return d}
+function pushEl(el){$('chat-log').appendChild(el);$('chat-log').scrollTop=1e9}
+
+// 解析下单意图：帮我做/开/buy + 数字 + u/usd + 标的
+function parseOrderIntent(t){
+  const m=t.match(/(做|开|下单|buy|open|建仓)[^0-9]*([0-9]+(?:\.[0-9]+)?)\s*(u|usd|刀|美金|美元|\$)?/i);
+  if(!m)return null;
+  const amt=Number(m[2]); if(!amt)return null;
+  const coin=(t.toUpperCase().match(/\b(BTC|ETH|SOL|HYPE|PURR|SUI|DOGE|AVAX|LINK|OP|ARB|[A-Z]{2,8})\b/)||[])[1]||null;
+  return {amount:amt,coin};
+}
+async function sendChat(){
+  const inp=$('chat-input');const q=inp.value.trim();if(!q)return;inp.value='';
+  pushMsg('u',q);
+  const oi=parseOrderIntent(q);
+  if(oi&&oi.coin){ // 下单意图 → 走确认流程
+    if(!token){pushMsg('a',LANG==='zh'?'下单需要先连接钱包哦，右上角「连接钱包」。':'Please connect wallet first.');return}
+    openOrderConfirm(oi.coin,oi.amount);return;
+  }
+  const typing=pushMsg('a','…');
+  try{
+    const d=await (await fetch('/api/agent/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})})).json();
+    typing.remove();
+    pushMsg('a',d.message||'（无结果）');
+    renderChatCards(d);
+  }catch(e){typing.textContent='查询失败，请重试。'}
+}
+function renderChatCards(d){
+  if(d.intent==='arbitrage_opportunity'){
+    const list=d.accepted||(d.candidate?[d.candidate]:[]);
+    list.filter(c=>c.decision==='ACCEPTED').slice(0,3).forEach(c=>{
+      const el=document.createElement('div');el.className='qcard';
+      el.innerHTML=`<div class="qh"><b>${c.asset}</b><span class="tag t-ok">✔ 有机会</span></div>
+        <div class="qbig pos">${fmt(c.netApr,1)}<span style="font-size:11px;color:var(--dim)"> 净APR</span></div>
+        <div class="dim" style="margin:4px 0">成本覆盖比 ${c.costCoverage.toFixed(2)} · 组合：现货多+永续空</div>
+        <button class="btn mini" onclick="openOrderConfirm('${c.asset}',1000)">💰 ${LANG==='zh'?'下单':'Trade'}</button>`;
+      pushEl(el);
+    });
+  }else if(d.intent==='funding_rates'&&d.top){
+    const el=document.createElement('div');el.className='qcard no';
+    el.innerHTML='<div class="qh"><b>费率 Top</b></div>'+d.top.slice(0,5).map(r=>`<div style="display:flex;justify-content:space-between"><span>${r.coin}${r.hasSpot?' 🔗':''}</span><span class="${r.hourlyFundingPct>=0?'pos':'neg'}">${fmt(r.hourlyFundingPct,4)}/h</span></div>`).join('');
+    pushEl(el);
+  }
+}
+
+// 确认下单弹窗（拉 quote → 展示预期收益/风险 → 确认开仓）
+async function openOrderConfirm(asset,amount){
+  if(!token){alert(LANG==='zh'?'请先连接钱包':'Connect wallet first');return}
+  const mode=WORKSPACE;
+  $('order-body').innerHTML='<div class="dim">加载报价…</div>';$('ordermodal').classList.add('on');
+  const q=await (await authFetch('/api/agent/quote',{method:'POST',body:JSON.stringify({asset,notionalUsd:amount,mode})})).json();
+  if(q.error){$('order-body').innerHTML=`<div class="neg">${q.error}</div><button class="btn ghost mini" style="margin-top:10px" onclick="$('ordermodal').classList.remove('on')">关闭</button>`;return}
+  const e=q.estimate;const accepted=q.decision==='ACCEPTED';
+  const riskTag=q.risk==='LOW'?'t-ok':q.risk==='MEDIUM'?'t-warn':'t-live';
+  $('order-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span style="font-size:19px;font-weight:800">${q.asset} ${LANG==='zh'?'套利下单':'Arbitrage order'}</span>
+      <span class="tag ${mode==='LIVE'?'t-live':'t-paper'}">${mode==='LIVE'?(LANG==='zh'?'实盘':'LIVE'):(LANG==='zh'?'虚拟盘':'VIRTUAL')}</span>
+      <span class="tag ${riskTag}">RISK ${q.risk}</span>
+    </div>
+    <div class="narr" style="margin:6px 0">${q.narrative.zh}</div>
+    <div class="sec-t">${LANG==='zh'?'组合结构':'Structure'}</div>
+    ${q.legs.map(l=>`<div style="font-size:12px;padding:3px 0"><b class="${l.side==='long'?'pos':'neg'}">${l.side==='long'?'▲多':'▼空'}</b> ${l.market} · ${l.instrument}${l.hourlyFundingPct!==null?` · ${fmt(l.hourlyFundingPct,5)}/h`:''}</div>`).join('')}
+    <div class="sec-t">${LANG==='zh'?'预期收益（投入 $':'Estimate ($'}${q.notionalUsd}）</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-size:12px">
+      <div>每 8h：<span class="pos">+$${e.per8hUsd.toFixed(2)}</span></div>
+      <div>每天：<span class="pos">+$${e.perDayUsd.toFixed(2)}</span></div>
+      <div>每周：<span class="pos">+$${e.perWeekUsd.toFixed(2)}</span></div>
+      <div>一次性成本：<span class="neg">-$${e.oneTimeCostUsd.toFixed(2)}</span></div>
+      <div style="grid-column:1/3">净/周（扣成本）：<b class="${e.netPerWeekUsd>=0?'pos':'neg'}">${usd(e.netPerWeekUsd)}</b> · 净APR ${fmt(q.netApr,1)}</div>
+    </div>
+    <div style="font-size:11px;color:var(--amber);margin:8px 0">⚠ ${q.warning}</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      ${accepted?`<button class="btn" style="flex:1" onclick="confirmOrder('${q.asset}',${q.notionalUsd},'${mode}')">✅ ${LANG==='zh'?'确认下单':'Confirm'}</button>`:`<button class="btn" style="flex:1;opacity:.5" disabled>${LANG==='zh'?'风控不通过':'Rejected'}</button>`}
+      <button class="btn ghost" onclick="$('ordermodal').classList.remove('on')">${LANG==='zh'?'取消':'Cancel'}</button>
+    </div>
+    <div class="dim" style="font-size:10px;margin-top:8px">${q.disclaimer}</div>`;
+}
+async function confirmOrder(asset,notionalUsd,mode){
+  $('order-body').insertAdjacentHTML('beforeend','<div class="dim" id="ord-msg" style="margin-top:8px">下单中…</div>');
+  const d=await (await authFetch('/api/agent/order',{method:'POST',body:JSON.stringify({asset,notionalUsd,mode})})).json();
+  if(d.error){$('ord-msg').innerHTML=`<span class="neg">${d.error}</span>`;return}
+  $('ordermodal').classList.remove('on');
+  pushMsg('a',`✅ ${LANG==='zh'?`已开仓 ${asset} $${notionalUsd}（${mode==='LIVE'?'实盘':'虚拟盘'}）。可在收益/风险中心查看，或随时手动平仓。`:`Opened ${asset} $${notionalUsd}.`}`);
+  loadMe();
 }
 
 /* ---------- boot ---------- */

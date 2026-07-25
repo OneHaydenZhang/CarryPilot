@@ -6,9 +6,9 @@ import { config } from '../config.js';
 import { log } from '../lib/logger.js';
 import { issueNonce, verifyAndIssueToken, authenticate } from '../lib/auth.js';
 import { fetchPerpSnapshots, fetchSpotSnapshots, type HlPerpSnapshot, type HlSpotSnapshot } from '../connectors/hyperliquid.js';
-import { buildS1Candidates, ENGINE_VERSION, CONFIG, type Candidate } from '../core/candidates.js';
+import { buildS1Candidates, ENGINE_VERSION, CONFIG, setDemo, demoFundingFor, type Candidate } from '../core/candidates.js';
 import { loadStore, saveStore, store, virtualBalanceOf, setVirtualBalance } from '../core/store.js';
-import { tickAgents, closePosition, viewPosition, STYLE_PARAMS, LIMITS, type LiveExecutor } from '../core/agents.js';
+import { tickAgents, closePosition, viewPosition, buildManualPosition, STYLE_PARAMS, LIMITS, type LiveExecutor } from '../core/agents.js';
 import { llmEnabled } from '../core/llm.js';
 import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINTS } from '../core/points.js';
 import { buildApproveAgentTypedData, submitApproveAgent, liveOpenCarry, liveCloseCarry, fetchLiveAccount, getOrCreateAgentWallet } from '../connectors/hlExchange.js';
@@ -48,12 +48,22 @@ function llmDisplayName(): string {
   return 'AI';
 }
 
+let demoInit = false;
 async function refreshScan(): Promise<ScanState> {
   const observedAt = new Date().toISOString();
   const [perpsR, spotsR] = await Promise.allSettled([fetchPerpSnapshots(), fetchSpotSnapshots()]);
   if (perpsR.status === 'rejected') throw new Error('HL perps source failed');
   const perps = perpsR.value;
   const spots = spotsR.status === 'fulfilled' ? spotsR.value : [];
+  // DEMO 模式：首次拉到数据后，挑 3 个「有现货可对冲」的知名标的作为演示机会
+  if (process.env.DEMO_MODE === 'true' && !demoInit && spots.length) {
+    demoInit = true;
+    const sb = new Set(spots.map((s) => s.baseToken));
+    const prefer = ['BTC', 'ETH', 'SOL', 'HYPE'].filter((c) => sb.has(c) || sb.has(CONFIG.wrapperMap[c] ?? ''));
+    const extra = perps.map((p) => p.coin).filter((c) => (sb.has(c) || sb.has(CONFIG.wrapperMap[c] ?? '')) && !prefer.includes(c));
+    setDemo([...prefer, ...extra].slice(0, 3));
+    log.info('demo_mode_on', { coins: [...prefer, ...extra].slice(0, 3) });
+  }
   const candidates = buildS1Candidates(perps, spots, observedAt);
   scan = { generatedAt: observedAt, candidates, perps, spots, sourcesOk: spotsR.status === 'fulfilled' };
   return scan;
@@ -122,14 +132,17 @@ const server = createServer(async (req, res) => {
       const s = await getScan();
       const sb = spotByBase();
       const rates = s.perps
-        .map((p) => ({
-          coin: p.coin,
-          hourlyFundingPct: p.hourlyFunding * 100,
-          annualizedPct: p.hourlyFunding * 24 * 365 * 100,
-          markPx: p.markPx,
-          oiUsd: Math.round(p.openInterest * p.markPx),
-          hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
-        }))
+        .map((p) => {
+          const f = demoFundingFor(p.coin) ?? p.hourlyFunding; // demo 标的费率与机会一致
+          return {
+            coin: p.coin,
+            hourlyFundingPct: f * 100,
+            annualizedPct: f * 24 * 365 * 100,
+            markPx: p.markPx,
+            oiUsd: Math.round(p.openInterest * p.markPx),
+            hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
+          };
+        })
         .sort((a, b) => Math.abs(b.hourlyFundingPct) - Math.abs(a.hourlyFundingPct));
       return json(res, 200, {
         generatedAt: s.generatedAt,
@@ -297,6 +310,73 @@ const server = createServer(async (req, res) => {
       closePosition(pos, 'MANUAL');
       saveStore();
       return json(res, 200, { position: viewPosition(pos) });
+    }
+
+    // ---- 对话式确认下单（Level 2 Assisted Execution）----
+    if (path === '/api/agent/quote' && req.method === 'POST') {
+      const b = await readBody(req);
+      const asset = String(b.asset ?? '').toUpperCase();
+      const mode = b.mode === 'LIVE' ? 'LIVE' : 'PAPER';
+      const notionalUsd = Math.min(Math.max(Number(b.notionalUsd) || 0, 50), mode === 'LIVE' ? LIMITS.maxLiveCapitalUsd : Math.min(LIMITS.maxNotionalUsd, virtualBalanceOf(owner)));
+      const s = await getScan();
+      const c = s.candidates.find((x) => x.strategy === 'S1_SPOT_PERP' && x.asset === asset);
+      if (!c) return json(res, 404, { error: `${asset} 无可评估的站内套利候选` });
+      const feePct = CONFIG.takerFeePct.hyperliquid ?? 0.045;
+      const oneTimeCostUsd = notionalUsd * ((feePct * 4 + 0.05) / 100);
+      const hourlyPct = c.legs.find((l) => l.instrument === 'perp')?.hourlyFundingPct ?? 0;
+      const perHour = (notionalUsd * hourlyPct) / 100;
+      const risk = c.decision === 'ACCEPTED' ? (c.costCoverage >= 3 ? 'LOW' : 'MEDIUM') : 'HIGH';
+      return json(res, 200, {
+        asset,
+        mode,
+        notionalUsd,
+        decision: c.decision,
+        rejectionCodes: c.rejectionCodes,
+        netApr: c.netApr,
+        grossApr: c.grossApr,
+        costCoverage: c.costCoverage,
+        breakevenHours: c.breakevenHours,
+        legs: c.legs,
+        narrative: c.narrative,
+        risk,
+        estimate: {
+          oneTimeCostUsd,
+          per8hUsd: perHour * 8,
+          perDayUsd: perHour * 24,
+          perWeekUsd: perHour * 168,
+          netPerWeekUsd: perHour * 168 - oneTimeCostUsd,
+        },
+        warning: c.decision === 'ACCEPTED' ? '费率随时会衰减或翻负，建议持有期间关注风险中心；这是持有型策略，需覆盖一次性成本后才净赚。' : '⚠ 此标的当前扣完成本为负，不建议开仓。',
+        disclaimer: DISCLAIMER,
+      });
+    }
+
+    if (path === '/api/agent/order' && req.method === 'POST') {
+      const b = await readBody(req);
+      const asset = String(b.asset ?? '').toUpperCase();
+      const mode = b.mode === 'LIVE' ? 'LIVE' : 'PAPER';
+      const cap = mode === 'LIVE' ? LIMITS.maxLiveCapitalUsd : Math.min(LIMITS.maxNotionalUsd, virtualBalanceOf(owner));
+      const notionalUsd = Math.min(Math.max(Number(b.notionalUsd) || 0, 50), cap);
+      if (mode === 'LIVE' && !store.wallets.find((w) => w.owner === owner)?.approvedAt) return json(res, 400, { error: '实盘下单需先授权 API Wallet（设置→交易授权）' });
+      const s = await getScan();
+      const c = s.candidates.find((x) => x.strategy === 'S1_SPOT_PERP' && x.asset === asset);
+      if (!c) return json(res, 404, { error: `${asset} 无可评估的站内套利候选` });
+      // RiskGuard：只允许开 ACCEPTED（对话确认下单同样受硬门约束，除非用户显式 force 覆盖研究结论——本期不允许）
+      if (c.decision !== 'ACCEPTED') return json(res, 400, { error: `${asset} 当前扣完成本为负（${c.rejectionCodes.join(',')}），风控拒绝开仓` });
+      const pos = buildManualPosition(owner, c, notionalUsd, mode);
+      if (mode === 'LIVE') {
+        try {
+          const r = await liveOpenCarry(owner, asset, notionalUsd);
+          pos.fills = r.fills;
+          pos.spotMarket = r.spotMarket;
+          pos.perpMarket = r.perpMarket;
+        } catch (err) {
+          return json(res, 500, { error: `实盘开仓失败（未建仓）: ${String(err).slice(0, 150)}` });
+        }
+      }
+      store.positions.push(pos);
+      saveStore();
+      return json(res, 200, { ok: true, position: viewPosition(pos) });
     }
 
     if (path === '/api/live/typed-data' && req.method === 'POST') {

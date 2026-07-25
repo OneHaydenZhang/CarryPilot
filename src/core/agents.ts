@@ -63,6 +63,34 @@ function openPosition(agent: AgentRecord, c: Candidate, notionalUsd: number): Po
   };
 }
 
+/** 对话式一次性下单：构造无 agent 托管的手动仓（agentId=null）。用户自行管理（手动平仓）。 */
+export function buildManualPosition(owner: string, c: Candidate, notionalUsd: number, mode: 'PAPER' | 'LIVE'): PositionRecord {
+  const feePct = CONFIG.takerFeePct.hyperliquid ?? 0.045;
+  const openCostUsd = notionalUsd * ((feePct * 2 + CONFIG.slippageReservePct / 2) / 100);
+  const now = new Date().toISOString();
+  const spotLeg = c.legs.find((l) => l.instrument === 'spot');
+  const perpLeg = c.legs.find((l) => l.instrument === 'perp');
+  return {
+    id: randomUUID().slice(0, 8),
+    agentId: null,
+    owner,
+    mode,
+    asset: c.asset,
+    spotMarket: spotLeg?.market ?? '',
+    perpMarket: perpLeg?.market ?? '',
+    notionalUsd,
+    entryAt: now,
+    entryHourlyFundingPct: perpLeg?.hourlyFundingPct ?? 0,
+    entryNetApr: c.netApr,
+    currentHourlyFundingPct: perpLeg?.hourlyFundingPct ?? 0,
+    fundingAccruedUsd: 0,
+    costsPaidUsd: openCostUsd,
+    pnlUsd: -openCostUsd,
+    status: 'OPEN',
+    lastTickAt: now,
+  };
+}
+
 export function closePosition(pos: PositionRecord, reason: string): void {
   const feePct = CONFIG.takerFeePct.hyperliquid ?? 0.045;
   const closeCostUsd = pos.notionalUsd * ((feePct * 2 + CONFIG.slippageReservePct / 2) / 100);

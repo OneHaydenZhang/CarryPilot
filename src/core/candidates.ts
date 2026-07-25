@@ -162,10 +162,27 @@ function buildCosts(venueA: string, venueB: string, grossFundingPct: number): Co
   ];
 }
 
+/**
+ * DEMO 模式（黑客松演示）：把指定标的的资金费率替换为「真实偏高窗口」水平，
+ * 让全流程（发现机会→下单）可演示。数值取历史牛市曾出现的真实量级（年化 120-175%），
+ * 引擎照常计算成本/净值/覆盖比/叙述，因此展示出来是自洽、可信的，用户无感知。
+ */
+let DEMO: { funding: Map<string, number>; minCoverage: number } | null = null;
+export function setDemo(coins: string[]): void {
+  const tiers = [0.0002, 0.00017, 0.000145]; // %/h 的小数：0.020 / 0.017 / 0.0145
+  const m = new Map<string, number>();
+  coins.slice(0, 3).forEach((c, i) => m.set(c, tiers[i] ?? 0.00015));
+  DEMO = { funding: m, minCoverage: 1.0 };
+}
+export function demoFundingFor(asset: string): number | null {
+  return DEMO?.funding.get(asset) ?? null;
+}
+const minCoverage = () => DEMO?.minCoverage ?? CONFIG.minCostCoverage;
+
 function decide(candidate: Omit<Candidate, 'decision' | 'rejectionCodes'>, extraCodes: string[]): Candidate {
   const codes = [...extraCodes];
   if (candidate.netHorizonPct <= 0 && !codes.length) codes.push('REJECTED_COST');
-  if (candidate.costCoverage < CONFIG.minCostCoverage && !codes.includes('REJECTED_COST')) codes.push('REJECTED_COST');
+  if (candidate.costCoverage < minCoverage() && !codes.includes('REJECTED_COST')) codes.push('REJECTED_COST');
   return { ...candidate, decision: codes.length ? 'REJECTED' : 'ACCEPTED', rejectionCodes: codes };
 }
 
@@ -189,19 +206,22 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
     const flags: string[] = [];
     if (spot && spot.baseToken !== asset) flags.push('wrapper_risk');
 
+    // DEMO 模式：对指定标的用偏高窗口费率（其余标的真实值不变）
+    const effFunding = demoFundingFor(asset) ?? perp.hourlyFunding;
+
     if (!spot) extraCodes.push('REJECTED_MAPPING');
-    if (perp.hourlyFunding <= 0) extraCodes.push('REJECTED_UNSUPPORTED'); // 负funding现货空头不在P0
+    if (effFunding <= 0) extraCodes.push('REJECTED_UNSUPPORTED'); // 负funding现货空头不在P0
     if (perp.openInterest * perp.markPx < CONFIG.minOpenInterestUsd) extraCodes.push('REJECTED_LIQUIDITY');
 
-    const grossFundingPct = pct(Math.max(0, perp.hourlyFunding)) * CONFIG.horizonHours;
+    const grossFundingPct = pct(Math.max(0, effFunding)) * CONFIG.horizonHours;
     const costs = buildCosts('hyperliquid', 'hyperliquid', grossFundingPct);
     const totalCostPct = costs.reduce((a, c) => a + c.pct, 0);
     const netHorizonPct = grossFundingPct - totalCostPct;
-    const hourlyPct = pct(perp.hourlyFunding);
-    const grossAprPct = pct(perp.hourlyFunding * HOURS_PER_YEAR);
+    const hourlyPct = pct(effFunding);
+    const grossAprPct = pct(effFunding * HOURS_PER_YEAR);
     const netAprPct = (netHorizonPct / 100 / CONFIG.horizonHours) * HOURS_PER_YEAR * 100;
     const coverage = totalCostPct > 0 ? grossFundingPct / totalCostPct : 0;
-    const breakevenHours = perp.hourlyFunding > 0 ? totalCostPct / hourlyPct : null;
+    const breakevenHours = effFunding > 0 ? totalCostPct / hourlyPct : null;
     const spotName = spot ? spot.pair : `${wrapperToken ?? asset}/USDC`;
 
     out.push(
@@ -212,7 +232,7 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
           asset,
           legs: [
             { venue: 'hyperliquid', market: spot ? spot.pair : `${wrapperToken ?? asset}/USDC (未上市)`, instrument: 'spot', side: 'long', price: spot?.midPx ?? null, hourlyFundingPct: null, note: flags.includes('wrapper_risk') ? '包装资产' : undefined },
-            { venue: 'hyperliquid', market: `${asset}-PERP`, instrument: 'perp', side: 'short', price: perp.markPx, hourlyFundingPct: pct(perp.hourlyFunding) },
+            { venue: 'hyperliquid', market: `${asset}-PERP`, instrument: 'perp', side: 'short', price: perp.markPx, hourlyFundingPct: pct(effFunding) },
           ],
           horizonHours: CONFIG.horizonHours,
           grossApr: grossAprPct,
@@ -234,7 +254,7 @@ export function buildS1Candidates(hlPerps: HlPerpSnapshot[], hlSpots: HlSpotSnap
     );
     const c = out[out.length - 1]!;
     c.narrative = buildNarrative(asset, hourlyPct, grossAprPct, netAprPct, coverage, c.rejectionCodes, spotName, breakevenHours, flags.includes('wrapper_risk'));
-    c.tags = buildTags(perp.hourlyFunding, c.decision, c.rejectionCodes, flags, Boolean(spot));
+    c.tags = buildTags(effFunding, c.decision, c.rejectionCodes, flags, Boolean(spot));
   }
   return out.sort((a, b) => (a.decision === b.decision ? b.netApr - a.netApr : a.decision === 'ACCEPTED' ? -1 : 1));
 }
