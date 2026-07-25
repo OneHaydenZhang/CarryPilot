@@ -16,13 +16,16 @@
   },
   "devDependencies": {
     "@injectivelabs/ainj": "^0.1.0",
+    "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",
+    "express": "^5.2.1",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
   },
   "dependencies": {
     "@injectivelabs/networks": "^1.20.26",
     "@injectivelabs/sdk-ts": "^1.20.26",
+    "@injectivelabs/x402": "^0.0.1",
     "@nktkas/hyperliquid": "^0.33.2",
     "viem": "^2.55.8",
     "zod": "^4.4.3"

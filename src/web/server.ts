@@ -12,6 +12,7 @@ import { tickAgents, closePosition, viewPosition, STYLE_PARAMS, LIMITS, type Liv
 import { llmEnabled } from '../core/llm.js';
 import { balanceOf, grantWelcomeIfNew, scanDepositsFor, historyOf, treasuryInj, POINTS } from '../core/points.js';
 import { buildApproveAgentTypedData, submitApproveAgent, liveOpenCarry, liveCloseCarry, fetchLiveAccount, getOrCreateAgentWallet } from '../connectors/hlExchange.js';
+import { agentCard, classify, answerRates, answerOpportunities } from './agentApi.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const CACHE_TTL_MS = 60_000;
@@ -87,6 +88,35 @@ const server = createServer(async (req, res) => {
     if (path === '/') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.landing);
     if (path === '/app') return void res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(pages.app);
     if (path === '/api/health') return json(res, 200, { status: 'ok', engineVersion: ENGINE_VERSION, network: config.network });
+
+    // ---- 对外 Agent 能力（A2A / MCP 地基，只读免鉴权）----
+    if (path === '/.well-known/agent-card.json' || path === '/api/agent/card') {
+      return json(res, 200, agentCard());
+    }
+    if (path === '/api/agent/query') {
+      const q = req.method === 'POST' ? String((await readBody(req)).query ?? '') : (url.searchParams.get('q') ?? '');
+      if (!q.trim()) return json(res, 400, { error: 'empty query', hint: '传 ?q=... 或 POST {query}. 例：BTC 资金费率 / 现在有什么套利机会' });
+      const s = await getScan();
+      const sb = spotByBase();
+      const rates = s.perps.map((p) => ({
+        coin: p.coin,
+        hourlyFundingPct: p.hourlyFunding * 100,
+        annualizedPct: p.hourlyFunding * 24 * 365 * 100,
+        markPx: p.markPx,
+        hasSpot: sb.has(p.coin) || sb.has(CONFIG.wrapperMap[p.coin] ?? ''),
+      }));
+      const { intent, coin } = classify(q);
+      const generatedAt = s.generatedAt;
+      if (intent === 'arbitrage_opportunity') return json(res, 200, { query: q, coin, generatedAt, disclaimer: DISCLAIMER, ...answerOpportunities(s.candidates, coin) });
+      if (intent === 'funding_rates') return json(res, 200, { query: q, coin, generatedAt, disclaimer: DISCLAIMER, ...answerRates(rates, coin) });
+      return json(res, 200, {
+        query: q,
+        intent: 'unknown',
+        generatedAt,
+        message: '我能回答两类问题：① 资金费率（如「BTC 费率多少」「哪些币费率最高」）② 套利机会（如「现在有什么套利机会」「ETH 值得做吗」）。',
+        skills: ['funding_rates', 'arbitrage_opportunity'],
+      });
+    }
 
     if (path === '/api/scan') {
       const s = await getScan();
