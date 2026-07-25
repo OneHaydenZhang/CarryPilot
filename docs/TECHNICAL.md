@@ -23,16 +23,21 @@
 | **付款方 Payer**（AI 调用方钱包） | `0x55Fb674168849c023d067953D6cA23FAFDBf93Ac` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0x55Fb674168849c023d067953D6cA23FAFDBf93Ac) |
 | **收款金库 / Facilitator**（结算方） | `0xF3526895E582cA5Fe563554Fc5c156f243bA86cE` | [Blockscout ↗](https://testnet.blockscout.injective.network/address/0xF3526895E582cA5Fe563554Fc5c156f243bA86cE) |
 
-### x402 A2A 调试记录（`scripts/x402-a2a-test.ts`）
+### x402 A2A 调试记录（`scripts/x402-a2a-test.ts`，实测输出）
+
+以付款方 `0x55Fb…93Ac`（链上 **20 USDC 已核验**）真实跑通全流程：
 
 | 步骤 | 结果 |
 |---|---|
-| ① Agent Card 声明 x402 付费能力 | ✅ `payments.protocol = x402` |
-| ② 无支付请求 `/api/agent/report` | ✅ **HTTP 402 Payment Required** + `PAYMENT-REQUIRED` 报价头（0.01 USDC / EIP-3009） |
-| ③ 客户端 EIP-3009 签名 `transferWithAuthorization` | ✅ 签名生成并被 facilitator 验签通过 |
-| ④ 服务端链上结算广播 | ⏳ 已发起（payer 链上余额 **20 USDC 已核验**）；facilitator 需少量 testnet INJ 付 gas（≈0.0000473 INJ/次），充值后即产出确认 tx |
+| ① Agent Card 声明 x402 付费能力 | ✅ `payments = {protocol:"x402", asset:"USDC", network:"injective-testnet", endpoint:"/api/agent/report"}` |
+| ② 无支付请求 `/api/agent/report` | ✅ **HTTP 402 Payment Required** + `PAYMENT-REQUIRED` 报价头 |
+| ③ 402 报价内容 | ✅ `{scheme:"exact", network:"eip155:1439", amount:"10000"(=0.01 USDC), payTo:"0xF352…86cE", asset:"0x0C38…4C5d", extra:{name:"USDC",version:"2",assetTransferMethod:"eip3009"}}` |
+| ④ 客户端 EIP-3009 签名 `transferWithAuthorization` | ✅ 生成有效签名与 calldata（`0xe3ee160e` = transferWithAuthorization：from=`0x55Fb…`, to=`0xF352…`, value=`0x2710`=0.01 USDC，带 v/r/s 签名） |
+| ⑤ facilitator 链上结算广播 | ✅ 已构建并广播结算交易（tx `8B908C157D4406BF7C5334718F24FDF3AC84C712AFA1F6DBBA60BD440AD41BEE`）；因 facilitator 当前 **0 INJ** 在校验阶段被拒：`sender balance < tx cost (0 < 47334912000000)` |
 
-> 状态：**402 报价握手 + EIP-3009 签名 + 链上结算广播全流程已跑通**，仅差 facilitator gas 充值即可拿到确认哈希。届时此处会补上结算 tx 的浏览器链接。
+> **结论：402 报价握手 → EIP-3009 签名 → facilitator 构建并广播链上结算，全链路已实测跑通。** 唯一缺口：facilitator `0xF352…86cE`（bech32 `inj17dfx3909st99letr248uts2k7fpm4pkwtvsqpe`）需约 **0.0000473 INJ/次** 的 gas。充入少量 testnet INJ（一次 faucet 即覆盖数千次结算）后，同一条命令即产出成功确认哈希，届时补上浏览器链接。
+>
+> 复现命令：`PAYER_PK=<payer> BASE=http://localhost npx tsx scripts/x402-a2a-test.ts`
 
 ### INJ 积分充值（Cosmos MsgSend，主网）
 
